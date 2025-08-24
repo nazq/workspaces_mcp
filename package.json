@@ -84,7 +84,7 @@
     "scripts/**/*.{ts,js}": [
       "prettier --write"
     ],
-    "*.{json,md,yml,yaml}": [
+    "*.{json,md}": [
       "prettier --write"
     ]
   }

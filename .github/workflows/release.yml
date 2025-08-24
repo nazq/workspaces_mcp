@@ -121,11 +121,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Production Release
-<<<<<<< HEAD
-        uses: softprops/action-gh-release@v1
-=======
         uses: softprops/action-gh-release@v2
->>>>>>> 8a96205 (feat: upgrade dependencies and implement comprehensive MCP server)
         with:
           name: '🚀 Workspaces MCP ${{ steps.version.outputs.VERSION }}'
           tag_name: '${{ steps.version.outputs.VERSION }}'
