@@ -65,7 +65,8 @@ jobs:
           files: ./coverage/lcov.info
           flags: unittests
           name: codecov-umbrella
-      #    fail_ci_if_error: false
+          slug: nazq/workspaces_mcp
+          fail_ci_if_error: false
 
   security:
     name: Security Audit
