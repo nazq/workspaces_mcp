@@ -53,15 +53,16 @@ jobs:
       # - name: Integration tests
       #   run: npx vitest run --config vitest.integration.config.ts --exclude="**/mcp-protocol.test.ts" --exclude="**/cli-install.test.ts"
 
-      - name: Upload coverage to Codecov
-        if: matrix.node == 20 && matrix.os == 'ubuntu-latest'
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
+      # NOTE: Codecov disabled until repository is added to codecov.io
+      # - name: Upload coverage to Codecov
+      #   if: matrix.node == 20 && matrix.os == 'ubuntu-latest'
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: ./coverage/lcov.info
+      #     flags: unittests
+      #     name: codecov-umbrella
+      #     fail_ci_if_error: false
 
   security:
     name: Security Audit
@@ -121,7 +122,12 @@ jobs:
       - name: Test CLI installation
         run: |
           npm install -g packages/dxt-workspaces/*.tgz
-          which dxt-workspaces || echo "Not in PATH"
-          ls -la $(npm root -g)/../bin/ | grep dxt || echo "Not found in global bin"
-          $(npm root -g)/../bin/dxt-workspaces --version || echo "Direct call failed"
-          $(npm root -g)/../bin/dxt-workspaces --help || echo "Direct help failed"
+          echo "npm prefix: $(npm prefix -g)"
+          echo "npm root: $(npm root -g)"
+          echo "PATH: $PATH"
+          echo "Looking for binary:"
+          find $(npm prefix -g) -name "dxt-workspaces" 2>/dev/null || echo "Binary not found"
+          echo "Checking if npm created the binary link:"
+          ls -la $(npm prefix -g)/bin/ 2>/dev/null | grep dxt || echo "No binary link in npm prefix/bin"
+          echo "Testing direct execution:"
+          $(npm prefix -g)/bin/dxt-workspaces --version 2>/dev/null || echo "Direct execution failed"
