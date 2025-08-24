@@ -30,12 +30,12 @@ const CreateSharedInstructionArgsSchema = z.object({
   name: z.string().min(1),
   content: z.string().min(1),
   description: z.string().optional(),
-  variables: z.record(z.string()).optional(),
+  variables: z.record(z.string(), z.string()).optional(),
 });
 
 const UpdateGlobalInstructionsArgsSchema = z.object({
   content: z.string().min(1),
-  variables: z.record(z.string()).optional(),
+  variables: z.record(z.string(), z.string()).optional(),
 });
 
 const GetWorkspaceInfoArgsSchema = z.object({
@@ -292,7 +292,7 @@ export class ToolService {
       name: args.name,
       content: args.content,
       description: args.description,
-      variables: args.variables || {},
+      variables: (args.variables as Record<string, string>) || {},
     });
 
     const message = `Shared instruction '${args.name}' created successfully`;
@@ -350,7 +350,7 @@ export class ToolService {
 
     await this.deps.instructionsRepository.updateGlobal({
       content: args.content,
-      variables: args.variables || {},
+      variables: (args.variables as Record<string, string>) || {},
     });
 
     const message = 'Global instructions updated successfully';
