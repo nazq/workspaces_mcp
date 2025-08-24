@@ -1,6 +1,6 @@
 # 🏠 Workspaces MCP
 
-**The Ultimate Developer Experience Toolkit for Claude Desktop**
+**The Ultimate Workspace Toolkit for Claude Desktop**
 
 Transform how you work with Claude by automatically loading project context, sharing instructions across sessions, and organizing your development workspaces with zero configuration.
 
@@ -27,18 +27,16 @@ Transform how you work with Claude by automatically loading project context, sha
 
 - **Organize projects** in dedicated workspace folders
 - **Automatic resource discovery** - Claude sees your project structure
-- **Template system** for different project types (React, Python, Node.js, etc.)
 
 ### 🔄 **Shared Instruction Templates**
 
 - **Reusable instructions** for different project types
-- **Template library** with React TypeScript, Python Data Science, Node.js API patterns
 - **Custom templates** - create your own instruction sets
 
 ### 🚀 **DXT Distribution**
 
-- **Official DXT packaging** - follows Anthropic's distribution standard
-- **One-command installation** with `dxt install workspaces-mcp.dxt`
+- **Official DXT packaging** - follows Anthropic's [DXT standard](https://github.com/anthropics/dxt/blob/main/README.md)
+- **One-click installation** - download [HERE](https://github.com/nazq/workspaces_mcp/releases/latest)
 - **Auto-configures Claude Desktop** - no manual JSON editing
 - **Cross-platform support** (macOS, Windows, Linux)
 
@@ -312,14 +310,6 @@ Create your own instruction templates:
 create_shared_instruction name="my-template" content="# My Custom Template..."
 ```
 
-### Workspace Templates
-
-The system includes built-in templates:
-
-- **react-typescript** - React + TypeScript projects
-- **python-data** - Data science projects
-- **node-api** - Node.js API projects
-
 ### Logging
 
 Configure logging levels:
@@ -375,21 +365,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### Getting Help
 
 - 📖 [Documentation](docs/)
-- 💬 [Discussions](https://github.com/your-org/workspaces-mcp/discussions)
-- 🐛 [Issues](https://github.com/your-org/workspaces-mcp/issues)
-- 📧 Email: support@workspaces-mcp.dev
-
-## 🗺️ Roadmap
-
-- [ ] NPM package distribution
-- [ ] VS Code extension integration
-- [ ] Git integration for workspace templates
-- [ ] Cloud workspace synchronization
-- [ ] Plugin system for custom tools
-- [ ] Workspace sharing and collaboration
+- 💬 [Discussions](https://github.com/nazq/workspaces-mcp/discussions)
+- 🐛 [Issues](https://github.com/nazq/workspaces-mcp/issues)
 
 ---
 
 **Made with ❤️ for the Claude Desktop community**
 
-_Transform your development workflow with intelligent context management_
+_Transform your Claude Desktop workflow with intelligent context management_
