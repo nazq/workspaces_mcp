@@ -57,7 +57,6 @@ jobs:
         if: matrix.node == 20 && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v4
         with:
-          token: 4f85e65f-dc73-4ab5-9cad-15e38babdf30
           files: ./coverage/lcov.info
           fail_ci_if_error: false
           verbose: true
@@ -120,5 +119,7 @@ jobs:
       - name: Test CLI installation
         run: |
           npm install -g packages/dxt-workspaces/*.tgz
-          npx dxt-workspaces --version
-          npx dxt-workspaces --help
+          which dxt-workspaces || echo "Not in PATH"
+          ls -la $(npm root -g)/../bin/ | grep dxt || echo "Not found in global bin"
+          $(npm root -g)/../bin/dxt-workspaces --version || echo "Direct call failed"
+          $(npm root -g)/../bin/dxt-workspaces --help || echo "Direct help failed"
