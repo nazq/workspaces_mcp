@@ -1,0 +1,9 @@
+{
+  "moderate": true,
+  "high": true,
+  "critical": true,
+  "allowlist": [],
+  "report-type": "full",
+  "package-manager": "npm",
+  "skip-dev": false
+}

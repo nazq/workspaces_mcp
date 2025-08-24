@@ -1,0 +1,1 @@
+import path from "path"; import { fileURLToPath } from "url"; const __dirname = path.dirname(fileURLToPath(import.meta.url)); console.log("dirname:", __dirname); console.log("resolved:", path.resolve(__dirname, "../../../mcp-server/dist/index.js"));

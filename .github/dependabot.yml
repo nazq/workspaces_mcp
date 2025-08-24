@@ -1,0 +1,46 @@
+version: 2
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+    open-pull-requests-limit: 10
+    reviewers:
+      - 'maintainers'
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
+    groups:
+      development-dependencies:
+        dependency-type: 'development'
+        patterns:
+          - '@typescript-eslint/*'
+          - '@types/*'
+          - '@vitest/*'
+          - 'eslint*'
+          - 'prettier*'
+          - 'typescript'
+          - 'vitest'
+          - 'tsx'
+      build-tools:
+        patterns:
+          - '@rollup/*'
+          - 'rollup'
+          - 'rimraf'
+          - 'concurrently'
+          - 'cross-env'
+      testing-tools:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - 'c8'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/.github/workflows'
+    schedule:
+      interval: 'monthly'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'

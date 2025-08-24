@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🚀 Running pre-push checks..."
+
+# Run full CI pipeline
+echo "🔧 Running full CI pipeline (typecheck, lint, test, build)..."
+npm run ci || {
+  echo "❌ CI pipeline failed - push blocked"
+  echo "💡 Fix issues and try again"
+  exit 1
+}
+
+echo "✅ All pre-push checks passed - ready to push!"
