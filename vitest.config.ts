@@ -31,7 +31,6 @@ export default defineConfig({
       'dist',
       'cypress',
       'tests/integration/**/*.test.ts',
-      '**/logger.test.ts',
       '**/index.test.ts',
       '**/mcp-protocol.test.ts',
     ],
