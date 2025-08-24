@@ -59,7 +59,7 @@
       "title": "Workspaces Directory",
       "description": "Root directory where all workspaces will be stored",
       "type": "string",
-      "default": "~/Documents/workspaces"
+      "default": "${HOME}/Documents/workspaces"
     },
     "log_level": {
       "title": "Log Level",
