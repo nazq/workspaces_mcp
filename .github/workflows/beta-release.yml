@@ -1,0 +1,99 @@
+name: Beta Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: beta-release
+  cancel-in-progress: true
+
+jobs:
+  beta-release:
+    name: Beta Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run CI pipeline
+        run: npm run ci
+
+      - name: Generate beta version
+        id: version
+        run: |
+          BASE_VERSION=$(node -pe "require('./package.json').version")
+          BETA_VERSION="$BASE_VERSION-beta.$(date +%Y%m%d%H%M%S)"
+          echo "BETA_VERSION=$BETA_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Beta version: $BETA_VERSION"
+
+      - name: Update package.json for beta
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            pkg.version = '${{ steps.version.outputs.BETA_VERSION }}';
+            pkg.private = false;
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+
+      - name: Build project
+        run: npm run build
+
+      - name: Build DXT package
+        run: |
+          echo "📦 Building DXT package for beta release..."
+          npm run dxt:package
+          mv *.dxt workspaces-mcp-${{ steps.version.outputs.BETA_VERSION }}.dxt
+
+      - name: Create changelog entry
+        run: |
+          echo "## ${{ steps.version.outputs.BETA_VERSION }} ($(date -u +%Y-%m-%d))" > BETA_CHANGELOG.md
+          echo "" >> BETA_CHANGELOG.md
+          echo "**Beta Release - Latest Development Build**" >> BETA_CHANGELOG.md
+          echo "" >> BETA_CHANGELOG.md
+          echo "### Changes since last release:" >> BETA_CHANGELOG.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD >> BETA_CHANGELOG.md || echo "- Initial beta release" >> BETA_CHANGELOG.md
+          echo "" >> BETA_CHANGELOG.md
+          echo "" >> BETA_CHANGELOG.md
+          echo "⚠️ **This is a beta release** - use for testing purposes only." >> BETA_CHANGELOG.md
+
+      - name: Publish to npm (beta)
+        run: |
+          npm publish --tag beta --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Beta Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: '🚧 Beta ${{ steps.version.outputs.BETA_VERSION }}'
+          tag_name: 'v${{ steps.version.outputs.BETA_VERSION }}'
+          body_path: BETA_CHANGELOG.md
+          files: |
+            workspaces-mcp-${{ steps.version.outputs.BETA_VERSION }}.dxt
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update development status
+        run: |
+          echo "✅ Beta release ${{ steps.version.outputs.BETA_VERSION }} published!"
+          echo "📦 NPM: https://www.npmjs.com/package/workspaces-mcp/v/${{ steps.version.outputs.BETA_VERSION }}"
+          echo "🐙 GitHub: https://github.com/nazq/workspaces_mcp/releases/tag/v${{ steps.version.outputs.BETA_VERSION }}"

@@ -1,76 +1,137 @@
-name: Release
+name: Production Release
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+        type: string
+
+concurrency:
+  group: production-release
+  cancel-in-progress: true
 
 jobs:
-  release:
-    name: Create Release
+  production-release:
+    name: Production Release
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check
-        run: npm run typecheck
+      - name: Run full CI pipeline
+        run: npm run ci
 
-      - name: Lint
-        run: npm run lint
+      - name: Extract version from tag or input
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "CLEAN_VERSION=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "📦 Production version: $VERSION"
 
-      - name: Run tests
-        run: npx vitest run --exclude="**/logger.test.ts" --exclude="**/index.test.ts" --exclude="**/mcp-protocol.test.ts"
+      - name: Validate version format
+        run: |
+          if ! [[ "${{ steps.version.outputs.VERSION }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format. Expected: v1.2.3"
+            exit 1
+          fi
+
+      - name: Update package.json for production
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            pkg.version = '${{ steps.version.outputs.CLEAN_VERSION }}';
+            pkg.private = false;
+            require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
 
       - name: Build project
         run: npm run build
 
       - name: Build DXT package
         run: |
-          echo "📦 Building DXT package for release..."
+          echo "📦 Building DXT package for production release..."
           npm run dxt:package
-          ls -la *.dxt
+          mv *.dxt workspaces-mcp-${{ steps.version.outputs.CLEAN_VERSION }}.dxt
+          ls -la workspaces-mcp-*.dxt
 
-      - name: Extract version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      - name: Generate release notes from changelog
+        id: changelog
+        run: |
+          if [[ -f "CHANGELOG.md" ]]; then
+            echo "📝 Extracting changelog for version ${{ steps.version.outputs.VERSION }}"
+            # Extract changelog section for this version
+            awk '/^## \[${{ steps.version.outputs.CLEAN_VERSION }}\]/{flag=1} /^## \[/{if(flag && prev) exit} {if(flag) print} {prev=flag}' CHANGELOG.md > RELEASE_NOTES.md
+            if [[ ! -s "RELEASE_NOTES.md" ]]; then
+              echo "⚠️ No changelog entry found, generating from git log"
+              echo "## Changes" > RELEASE_NOTES.md
+              git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "HEAD~20")..HEAD >> RELEASE_NOTES.md
+            fi
+          else
+            echo "📝 No CHANGELOG.md found, generating from git log"
+            echo "## Changes" > RELEASE_NOTES.md
+            git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "HEAD~20")..HEAD >> RELEASE_NOTES.md
+          fi
+          echo "" >> RELEASE_NOTES.md
+          echo "## 📥 Installation" >> RELEASE_NOTES.md
+          echo "### NPM Package" >> RELEASE_NOTES.md
+          echo '```bash' >> RELEASE_NOTES.md
+          echo "npm install workspaces-mcp@${{ steps.version.outputs.CLEAN_VERSION }}" >> RELEASE_NOTES.md
+          echo '```' >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "### Claude Desktop Extension" >> RELEASE_NOTES.md
+          echo "1. Download the \`workspaces-mcp-${{ steps.version.outputs.CLEAN_VERSION }}.dxt\` file below" >> RELEASE_NOTES.md
+          echo "2. Open Claude Desktop" >> RELEASE_NOTES.md
+          echo "3. Go to Extensions > Install Extension" >> RELEASE_NOTES.md
+          echo "4. Select the downloaded \`.dxt\` file" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## 📖 Documentation" >> RELEASE_NOTES.md
+          echo "Full documentation: [README](https://github.com/nazq/workspaces_mcp#readme)" >> RELEASE_NOTES.md
 
-      - name: Create Release
+      - name: Publish to npm (latest)
+        run: |
+          npm publish --tag latest --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Production Release
         uses: softprops/action-gh-release@v1
         with:
-          name: Workspaces MCP ${{ steps.version.outputs.VERSION }}
-          body: |
-            # Workspaces MCP Server ${{ steps.version.outputs.VERSION }}
-
-            Intelligent workspace management and automatic context loading for Claude Desktop.
-
-            ## 🚀 Features
-            - **Automatic Context Loading**: Instantly load project context into Claude conversations
-            - **Workspace Organization**: Structured project management with templates
-            - **Shared Instructions**: Reusable instruction templates for different project types
-            - **Global Configuration**: Centralized settings that apply across all workspaces
-
-            ## 📥 Installation
-            1. Download the `workspaces-mcp-${{ steps.version.outputs.VERSION }}.dxt` file below
-            2. Open Claude Desktop
-            3. Go to Extensions > Install Extension
-            4. Select the downloaded `.dxt` file
-
-            ## 📖 Documentation
-            Full documentation is available in the [README](https://github.com/nazq/workspaces_mcp#readme).
+          name: '🚀 Workspaces MCP ${{ steps.version.outputs.VERSION }}'
+          tag_name: '${{ steps.version.outputs.VERSION }}'
+          body_path: RELEASE_NOTES.md
           files: |
-            *.dxt
+            workspaces-mcp-${{ steps.version.outputs.CLEAN_VERSION }}.dxt
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update release status
+        run: |
+          echo "🎉 Production release ${{ steps.version.outputs.VERSION }} published!"
+          echo "📦 NPM: https://www.npmjs.com/package/workspaces-mcp"
+          echo "🐙 GitHub: https://github.com/nazq/workspaces_mcp/releases/tag/${{ steps.version.outputs.VERSION }}"
+          echo "📊 Package size: $(du -h workspaces-mcp-*.dxt | cut -f1)"

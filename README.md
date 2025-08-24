@@ -6,9 +6,13 @@ Transform how you work with Claude by automatically loading project context, sha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/nazq/workspaces_mcp/workflows/CI/badge.svg)](https://github.com/nazq/workspaces_mcp/actions)
+[![Release](https://github.com/nazq/workspaces_mcp/workflows/Production%20Release/badge.svg)](https://github.com/nazq/workspaces_mcp/actions)
+[![Version](https://img.shields.io/github/v/release/nazq/workspaces_mcp)](https://github.com/nazq/workspaces_mcp/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/nazq/workspaces_mcp/total)](https://github.com/nazq/workspaces_mcp/releases)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-148%20passing-success)](#testing)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/tests-280%20passing-success)](#testing)
+[![Coverage](https://img.shields.io/badge/coverage-71.74%25-green)](#testing)
 [![codecov](https://codecov.io/gh/nazq/workspaces_mcp/graph/badge.svg)](https://codecov.io/gh/nazq/workspaces_mcp)
 
 ## ✨ Features
@@ -42,42 +46,53 @@ Transform how you work with Claude by automatically loading project context, sha
 
 ### Prerequisites
 
-- Node.js ≥18.0.0
-- Claude Desktop application
-- Git (for cloning)
+- [Claude Desktop](https://claude.ai/desktop) application
+- [Node.js](https://nodejs.org/) ≥18.0.0 (for development or building from source)
 
 ### Installation
 
-#### Option 1: Install from Release (Recommended)
+#### 📥 **Option 1: Direct Installation (Recommended)**
+
+1. **Download the latest release:**
+   - 🔗 **[Latest Release](https://github.com/nazq/workspaces_mcp/releases/latest)**
+   - Download the `workspaces-mcp-X.X.X.dxt` file
+
+2. **Install in Claude Desktop:**
+   - Open Claude Desktop
+   - Go to **Settings** → **Extensions**
+   - Click **"Install from file"**
+   - Select the downloaded `.dxt` file
+   - Restart Claude Desktop
+
+3. **Verify installation:**
+   - Look for **"🌍 Global Instructions"** in your resources panel
+   - You should see new tools available: `create_workspace`, `list_workspaces`, etc.
+
+#### 🛠️ **Option 2: Build from Source**
 
 ```bash
-# 1. Install DXT CLI
-npm install -g @anthropic/dxt
-
-# 2. Download the latest workspaces-mcp.dxt from releases
-
-# 3. Install the extension
-dxt install workspaces-mcp.dxt
-
-# 4. Restart Claude Desktop
-# Look for "🌍 Global Instructions" in your resources!
-```
-
-#### Option 2: Build from Source
-
-```bash
-# 1. Clone the repository
+# 1. Clone and setup
 git clone https://github.com/nazq/workspaces_mcp.git
 cd workspaces_mcp
-
-# 2. Install dependencies and build
 npm ci
+
+# 2. Build the DXT package
 npm run dxt:package
 
-# 3. Install the extension
-dxt install workspaces-mcp.dxt
+# 3. Install the generated .dxt file in Claude Desktop
+# Follow the same steps as Option 1 above
+```
 
-# 4. Restart Claude Desktop
+#### 📦 **Option 3: NPM Package**
+
+For developers integrating into other projects:
+
+```bash
+# Install as dependency
+npm install workspaces-mcp
+
+# Or install globally for CLI usage
+npm install -g workspaces-mcp
 ```
 
 ### Configuration
@@ -205,14 +220,16 @@ npm run dev
 
 ## 🧪 Testing
 
-Comprehensive test suite with **145 passing tests** covering:
+Enterprise-grade test suite with **280 passing tests** and **71.74% coverage** covering:
 
-- **MCP Protocol Implementation** - Resource and tool handlers
+- **MCP Protocol Implementation** - Request handling, validation, rate limiting
 - **Service Layer** - Workspace and instruction management
-- **File System Operations** - Safe file handling with security
-- **CLI Functionality** - Installation and configuration
-- **Error Handling** - Graceful failure modes
-- **Security** - Path traversal protection
+- **File System Operations** - Safe file handling with comprehensive error boundaries
+- **Transport Layer** - STDIO/HTTP with environment detection
+- **CLI Functionality** - Command processing and output formatting
+- **Server Architecture** - 5-layer architecture with dependency injection
+- **Error Handling** - Complete custom error class coverage
+- **Security** - Path traversal protection and input validation
 
 ```bash
 # Run all tests
@@ -223,7 +240,35 @@ npm run test:coverage
 
 # Interactive test UI
 npm run test:ui
+
+# Integration tests
+npm run test:integration
 ```
+
+## 📦 Releases
+
+### Release Channels
+
+- **🚀 Production**: Stable releases for production use
+  - **Install**: Download from [Latest Release](https://github.com/nazq/workspaces_mcp/releases/latest)
+  - **NPM**: `npm install workspaces-mcp@latest`
+  - **Versioning**: Semantic versioning (v1.0.0, v1.1.0, v2.0.0)
+
+- **🚧 Beta**: Latest development builds for testing
+  - **Install**: Check [Pre-releases](https://github.com/nazq/workspaces_mcp/releases?q=prerelease%3Atrue)
+  - **NPM**: `npm install workspaces-mcp@beta`
+  - **Versioning**: `1.0.0-beta.YYYYMMDDHHMMSS`
+
+### Release Process
+
+1. **Development**: Feature branches → PRs to `main`
+2. **Beta Release**: Automatic on merge to `main`
+3. **Production Release**: Manual tagging (`git tag v1.0.0`)
+4. **Distribution**: NPM package + GitHub release with DXT file
+
+### Changelog
+
+All changes are documented in [CHANGELOG.md](./CHANGELOG.md) following [Keep a Changelog](https://keepachangelog.com/) format.
 
 ## 📁 Configuration
 

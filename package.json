@@ -36,6 +36,7 @@
     "clean": "rimraf dist/ *.tgz node_modules/.cache",
     "clean:deps": "rimraf node_modules",
     "release": "tsx scripts/release.ts",
+    "changelog": "tsx scripts/changelog.ts",
     "prepare": "husky install"
   },
   "dependencies": {
