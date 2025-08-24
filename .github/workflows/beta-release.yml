@@ -80,7 +80,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Beta Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: '🚧 Beta ${{ steps.version.outputs.BETA_VERSION }}'
           tag_name: 'v${{ steps.version.outputs.BETA_VERSION }}'
