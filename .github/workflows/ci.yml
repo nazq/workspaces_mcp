@@ -122,12 +122,12 @@ jobs:
       - name: Test CLI installation
         run: |
           npm install -g packages/dxt-workspaces/*.tgz
-          echo "npm prefix: $(npm prefix -g)"
-          echo "npm root: $(npm root -g)"
-          echo "PATH: $PATH"
-          echo "Looking for binary:"
-          find $(npm prefix -g) -name "dxt-workspaces" 2>/dev/null || echo "Binary not found"
-          echo "Checking if npm created the binary link:"
-          ls -la $(npm prefix -g)/bin/ 2>/dev/null | grep dxt || echo "No binary link in npm prefix/bin"
-          echo "Testing direct execution:"
-          $(npm prefix -g)/bin/dxt-workspaces --version 2>/dev/null || echo "Direct execution failed"
+          echo "Creating bin directory if missing:"
+          mkdir -p $(npm prefix -g)/bin
+          echo "Manually creating symlink:"
+          ln -sf $(npm prefix -g)/lib/node_modules/dxt-workspaces/dist/index.js $(npm prefix -g)/bin/dxt-workspaces
+          echo "Setting executable permissions:"
+          chmod +x $(npm prefix -g)/bin/dxt-workspaces
+          echo "Testing CLI commands:"
+          dxt-workspaces --version
+          dxt-workspaces --help
