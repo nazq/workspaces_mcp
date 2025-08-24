@@ -8,7 +8,7 @@ A Model Context Protocol (MCP) server that automatically loads project context, 
 [![CI](https://github.com/nazq/workspaces_mcp/workflows/CI/badge.svg)](https://github.com/nazq/workspaces_mcp/actions)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20.10.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![Coverage](https://img.shields.io/badge/coverage-71.74%25-green)](#testing)
+[![Coverage](https://img.shields.io/badge/coverage-52.27%25-orange)](#testing)
 
 ## ✨ Features
 
@@ -180,7 +180,7 @@ npm test
 
 ## 🧪 Testing
 
-Comprehensive test suite with 258 passing tests and 71.74% coverage:
+Comprehensive test suite with 258 passing tests and 52.27% coverage:
 
 - MCP Protocol Implementation
 - Service Layer Business Logic
