@@ -63,7 +63,7 @@ describe('templates', () => {
   describe('INSTRUCTION_TEMPLATES', () => {
     it('should have expected template names', () => {
       const templateNames = Object.keys(INSTRUCTION_TEMPLATES);
-      
+
       expect(templateNames).toContain('react-typescript');
       expect(templateNames).toContain('python-data');
       expect(templateNames).toContain('node-api');
@@ -75,11 +75,11 @@ describe('templates', () => {
         expect(template).toHaveProperty('name');
         expect(template).toHaveProperty('description');
         expect(template).toHaveProperty('content');
-        
+
         expect(typeof template.name).toBe('string');
         expect(typeof template.description).toBe('string');
         expect(typeof template.content).toBe('string');
-        
+
         expect(template.name.length).toBeGreaterThan(0);
         expect(template.description.length).toBeGreaterThan(0);
         expect(template.content.length).toBeGreaterThan(50);
@@ -91,7 +91,9 @@ describe('templates', () => {
 
       it('should have correct metadata', () => {
         expect(template?.name).toBe('React TypeScript Project');
-        expect(template?.description).toBe('Instructions for React projects using TypeScript');
+        expect(template?.description).toBe(
+          'Instructions for React projects using TypeScript'
+        );
       });
 
       it('should contain React-specific guidance', () => {
@@ -113,7 +115,9 @@ describe('templates', () => {
 
       it('should have correct metadata', () => {
         expect(template?.name).toBe('Python Data Science');
-        expect(template?.description).toBe('Instructions for Python data science projects');
+        expect(template?.description).toBe(
+          'Instructions for Python data science projects'
+        );
       });
 
       it('should contain Python data science guidance', () => {
@@ -135,7 +139,9 @@ describe('templates', () => {
 
       it('should have correct metadata', () => {
         expect(template?.name).toBe('Node.js API');
-        expect(template?.description).toBe('Instructions for Node.js API development');
+        expect(template?.description).toBe(
+          'Instructions for Node.js API development'
+        );
       });
 
       it('should contain Node.js API guidance', () => {
@@ -156,21 +162,23 @@ describe('templates', () => {
   describe('getInstructionTemplate', () => {
     it('should return correct template for valid name', () => {
       const template = getInstructionTemplate('react-typescript');
-      
+
       expect(template).toBeDefined();
       expect(template?.name).toBe('React TypeScript Project');
-      expect(template?.content).toContain('React TypeScript Project Instructions');
+      expect(template?.content).toContain(
+        'React TypeScript Project Instructions'
+      );
     });
 
     it('should return undefined for invalid template name', () => {
       const template = getInstructionTemplate('non-existent-template');
-      
+
       expect(template).toBeUndefined();
     });
 
     it('should be case sensitive', () => {
       const template = getInstructionTemplate('REACT-TYPESCRIPT');
-      
+
       expect(template).toBeUndefined();
     });
 
@@ -188,19 +196,19 @@ describe('templates', () => {
   describe('listInstructionTemplates', () => {
     it('should return all available templates', () => {
       const templates = listInstructionTemplates();
-      
+
       expect(templates).toHaveLength(3);
       expect(templates).toEqual(Object.values(INSTRUCTION_TEMPLATES));
     });
 
     it('should return templates with correct structure', () => {
       const templates = listInstructionTemplates();
-      
+
       templates.forEach((template) => {
         expect(template).toHaveProperty('name');
         expect(template).toHaveProperty('description');
         expect(template).toHaveProperty('content');
-        
+
         expect(typeof template.name).toBe('string');
         expect(typeof template.description).toBe('string');
         expect(typeof template.content).toBe('string');
@@ -210,14 +218,14 @@ describe('templates', () => {
     it('should return templates in consistent order', () => {
       const templates1 = listInstructionTemplates();
       const templates2 = listInstructionTemplates();
-      
+
       expect(templates1).toEqual(templates2);
     });
 
     it('should contain expected template names', () => {
       const templates = listInstructionTemplates();
       const names = templates.map((t) => t.name);
-      
+
       expect(names).toContain('React TypeScript Project');
       expect(names).toContain('Python Data Science');
       expect(names).toContain('Node.js API');
@@ -225,7 +233,7 @@ describe('templates', () => {
 
     it('should not be empty', () => {
       const templates = listInstructionTemplates();
-      
+
       expect(templates.length).toBeGreaterThan(0);
     });
   });

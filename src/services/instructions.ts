@@ -31,8 +31,12 @@ export class InstructionsService {
     fileSystemService?: FileSystemService
   ) {
     this.fs = fileSystemService ?? new FileSystemService();
-    this.sharedInstructionsPath = getSharedInstructionsPath(workspacesRoot);
-    this.globalInstructionsPath = getGlobalInstructionsPath(workspacesRoot);
+    this.sharedInstructionsPath = getSharedInstructionsPath(
+      this.workspacesRoot
+    );
+    this.globalInstructionsPath = getGlobalInstructionsPath(
+      this.workspacesRoot
+    );
   }
 
   async createSharedInstruction(

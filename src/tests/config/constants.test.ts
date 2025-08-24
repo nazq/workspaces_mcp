@@ -42,21 +42,31 @@ describe('constants', () => {
   describe('default global instructions', () => {
     it('should contain expected content sections', () => {
       expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('# Global Instructions');
-      expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('## Your AI Assistant Guidelines');
+      expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain(
+        '## Your AI Assistant Guidelines'
+      );
       expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('## Workspace Context');
       expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('## Getting Started');
     });
 
     it('should contain guidance for users', () => {
       expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('Be concise and helpful');
-      expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('Follow project conventions');
-      expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('Automatic context loading');
-      expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('Edit this file to customize');
+      expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain(
+        'Follow project conventions'
+      );
+      expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain(
+        'Automatic context loading'
+      );
+      expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain(
+        'Edit this file to customize'
+      );
     });
 
     it('should have proper markdown formatting', () => {
       // Should have proper headings
-      expect(DEFAULT_GLOBAL_INSTRUCTIONS.split('## ').length).toBeGreaterThan(3);
+      expect(DEFAULT_GLOBAL_INSTRUCTIONS.split('## ').length).toBeGreaterThan(
+        3
+      );
       // Should have ordered list
       expect(DEFAULT_GLOBAL_INSTRUCTIONS).toContain('1. Edit this file');
       // Should have horizontal rule

@@ -60,14 +60,17 @@ describe('ResourceHandler', () => {
       // Create workspace with files
       const workspaceDir = path.join(tempDir, 'test-workspace');
       await fs.ensureDir(workspaceDir);
-      await fs.writeFile(path.join(workspaceDir, 'README.md'), '# Test Workspace');
+      await fs.writeFile(
+        path.join(workspaceDir, 'README.md'),
+        '# Test Workspace'
+      );
       await fs.writeFile(path.join(workspaceDir, 'notes.txt'), 'Some notes');
 
       const result = await resourceHandler.listResources();
 
       // Should include workspace resource (check more specifically)
-      const workspaceResources = result.resources.filter((r) =>
-        r.uri === `${MCP_RESOURCE_SCHEMES.WORKSPACE}/test-workspace`
+      const workspaceResources = result.resources.filter(
+        (r) => r.uri === `${MCP_RESOURCE_SCHEMES.WORKSPACE}/test-workspace`
       );
       expect(workspaceResources.length).toBeGreaterThan(0);
 

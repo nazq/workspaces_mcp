@@ -18,10 +18,10 @@
   "support": "https://github.com/nazq/workspaces_mcp/issues",
   "server": {
     "type": "node",
-    "entry_point": "packages/mcp-server/dist/index.js",
+    "entry_point": "dist/server/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/packages/mcp-server/dist/index.js"],
+      "args": ["${__dirname}/dist/server/index.js"],
       "env": {
         "WORKSPACES_ROOT": "${user_config.workspaces_root}",
         "WORKSPACES_LOG_LEVEL": "${user_config.log_level}"

@@ -58,7 +58,11 @@ describe('paths', () => {
     it('should return correct global instructions path', () => {
       const workspacesRoot = '/test/workspaces';
       const result = getGlobalInstructionsPath(workspacesRoot);
-      const expected = path.join(workspacesRoot, 'SHARED_INSTRUCTIONS', 'GLOBAL.md');
+      const expected = path.join(
+        workspacesRoot,
+        'SHARED_INSTRUCTIONS',
+        'GLOBAL.md'
+      );
 
       expect(result).toBe(expected);
     });

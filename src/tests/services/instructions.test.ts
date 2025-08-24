@@ -29,7 +29,10 @@ describe('InstructionsService', () => {
         description: 'React project template',
       };
 
-      await instructionsService.createSharedInstruction('react-project', options);
+      await instructionsService.createSharedInstruction(
+        'react-project',
+        options
+      );
 
       const sharedDir = path.join(tempDir, 'SHARED_INSTRUCTIONS');
       const filePath = path.join(sharedDir, 'react-project.md');
@@ -175,7 +178,8 @@ describe('InstructionsService', () => {
       };
 
       await instructionsService.createSharedInstruction('react', options);
-      const instruction = await instructionsService.getSharedInstruction('react');
+      const instruction =
+        await instructionsService.getSharedInstruction('react');
 
       expect(instruction.name).toBe('react');
       expect(instruction.content).toBe(options.content);
@@ -205,7 +209,11 @@ describe('InstructionsService', () => {
         content: 'Test content',
       });
 
-      const filePath = path.join(tempDir, 'SHARED_INSTRUCTIONS', 'test-instruction.md');
+      const filePath = path.join(
+        tempDir,
+        'SHARED_INSTRUCTIONS',
+        'test-instruction.md'
+      );
       expect(await fs.pathExists(filePath)).toBe(true);
 
       await instructionsService.deleteSharedInstruction('test-instruction');
@@ -236,7 +244,8 @@ describe('InstructionsService', () => {
       const newContent = '# Updated Content\n\nNew information.';
       await instructionsService.updateSharedInstruction('test', newContent);
 
-      const instruction = await instructionsService.getSharedInstruction('test');
+      const instruction =
+        await instructionsService.getSharedInstruction('test');
       expect(instruction.content).toBe(newContent);
     });
 

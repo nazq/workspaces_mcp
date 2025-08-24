@@ -53,16 +53,15 @@ jobs:
       # - name: Integration tests
       #   run: npx vitest run --config vitest.integration.config.ts --exclude="**/mcp-protocol.test.ts" --exclude="**/cli-install.test.ts"
 
-      # NOTE: Codecov disabled until repository is added to codecov.io
-      # - name: Upload coverage to Codecov
-      #   if: matrix.node == 20 && matrix.os == 'ubuntu-latest'
-      #   uses: codecov/codecov-action@v4
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     files: ./coverage/lcov.info
-      #     flags: unittests
-      #     name: codecov-umbrella
-      #     fail_ci_if_error: false
+      - name: Upload coverage to Codecov
+        if: matrix.node == 20 && matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+      #    fail_ci_if_error: false
 
   security:
     name: Security Audit
@@ -122,8 +121,39 @@ jobs:
           npm run dxt:package
           ls -la *.dxt
 
-      - name: Upload DXT package
+      - name: Upload DXT package as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: workspaces-mcp-dxt
+          name: workspaces-mcp-dxt-${{ github.sha }}
           path: '*.dxt'
+          retention-days: 30
+
+      - name: Create Beta Release (on main)
+        if: github.ref == 'refs/heads/main'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: beta-${{ github.sha }}
+          release_name: Beta Release ${{ github.sha }}
+          body: |
+            Beta release of Workspaces MCP Server
+
+            Built from commit: ${{ github.sha }}
+
+            ## Installation
+            Download the `.dxt` file and install via Claude Desktop extension manager.
+          draft: false
+          prerelease: true
+
+      - name: Upload DXT to Beta Release
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./workspaces_mcp.dxt
+          asset_name: workspaces-mcp-${{ github.sha }}.dxt
+          asset_content_type: application/octet-stream

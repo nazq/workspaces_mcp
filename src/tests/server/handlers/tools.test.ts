@@ -42,7 +42,9 @@ describe('ToolHandler', () => {
         (tool) => tool.name === 'create_workspace'
       );
       expect(createWorkspaceTool).toBeDefined();
-      expect(createWorkspaceTool?.inputSchema.properties).toHaveProperty('name');
+      expect(createWorkspaceTool?.inputSchema.properties).toHaveProperty(
+        'name'
+      );
       expect(createWorkspaceTool?.inputSchema.required).toContain('name');
     });
   });
@@ -120,7 +122,9 @@ describe('ToolHandler', () => {
 
         const result = await toolHandler.callTool('list_workspaces', {});
 
-        expect(result.content[0]?.text).toContain('🏠 **Available Workspaces (2):**');
+        expect(result.content[0]?.text).toContain(
+          '🏠 **Available Workspaces (2):**'
+        );
         expect(result.content[0]?.text).toContain('📁 **workspace1**');
         expect(result.content[0]?.text).toContain('📁 **workspace2**');
         // Note: Description persistence will be implemented later
@@ -131,13 +135,17 @@ describe('ToolHandler', () => {
     describe('get_workspace_info', () => {
       it('should return workspace information', async () => {
         // Create workspace first
-        await toolHandler.callTool('create_workspace', { name: 'test-workspace' });
+        await toolHandler.callTool('create_workspace', {
+          name: 'test-workspace',
+        });
 
         const result = await toolHandler.callTool('get_workspace_info', {
           name: 'test-workspace',
         });
 
-        expect(result.content[0]?.text).toContain('📁 **Workspace: test-workspace**');
+        expect(result.content[0]?.text).toContain(
+          '📁 **Workspace: test-workspace**'
+        );
         expect(result.content[0]?.text).toContain('"name": "test-workspace"');
       });
 
@@ -156,14 +164,21 @@ describe('ToolHandler', () => {
           description: 'React development guide',
         };
 
-        const result = await toolHandler.callTool('create_shared_instruction', args);
+        const result = await toolHandler.callTool(
+          'create_shared_instruction',
+          args
+        );
 
         expect(result.content[0]?.text).toContain(
           '✅ Created shared instruction "react-guide" successfully!'
         );
 
         // Verify file was created
-        const filePath = path.join(tempDir, 'SHARED_INSTRUCTIONS', 'react-guide.md');
+        const filePath = path.join(
+          tempDir,
+          'SHARED_INSTRUCTIONS',
+          'react-guide.md'
+        );
         expect(await fs.pathExists(filePath)).toBe(true);
         const content = await fs.readFile(filePath, 'utf8');
         expect(content).toBe(args.content);
@@ -175,7 +190,10 @@ describe('ToolHandler', () => {
           content: '# Minimal Guide\n\nBasic content.',
         };
 
-        const result = await toolHandler.callTool('create_shared_instruction', args);
+        const result = await toolHandler.callTool(
+          'create_shared_instruction',
+          args
+        );
 
         expect(result.content[0]?.text).toContain(
           '✅ Created shared instruction "minimal-guide" successfully!'
@@ -200,14 +218,21 @@ describe('ToolHandler', () => {
           content: '# Updated Global Instructions\n\nNew global rules.',
         };
 
-        const result = await toolHandler.callTool('update_global_instructions', args);
+        const result = await toolHandler.callTool(
+          'update_global_instructions',
+          args
+        );
 
         expect(result.content[0]?.text).toContain(
           '✅ Updated global instructions successfully!'
         );
 
         // Verify file was updated
-        const globalPath = path.join(tempDir, 'SHARED_INSTRUCTIONS', 'GLOBAL.md');
+        const globalPath = path.join(
+          tempDir,
+          'SHARED_INSTRUCTIONS',
+          'GLOBAL.md'
+        );
         expect(await fs.pathExists(globalPath)).toBe(true);
         const content = await fs.readFile(globalPath, 'utf8');
         expect(content).toBe(args.content);
@@ -226,9 +251,14 @@ describe('ToolHandler', () => {
 
     describe('list_shared_instructions', () => {
       it('should return empty message when no shared instructions exist', async () => {
-        const result = await toolHandler.callTool('list_shared_instructions', {});
+        const result = await toolHandler.callTool(
+          'list_shared_instructions',
+          {}
+        );
 
-        expect(result.content[0]?.text).toContain('📋 No shared instructions found');
+        expect(result.content[0]?.text).toContain(
+          '📋 No shared instructions found'
+        );
       });
 
       it('should list existing shared instructions', async () => {
@@ -242,9 +272,14 @@ describe('ToolHandler', () => {
           content: '# Python Guide',
         });
 
-        const result = await toolHandler.callTool('list_shared_instructions', {});
+        const result = await toolHandler.callTool(
+          'list_shared_instructions',
+          {}
+        );
 
-        expect(result.content[0]?.text).toContain('📚 **Shared Instructions (2):**');
+        expect(result.content[0]?.text).toContain(
+          '📚 **Shared Instructions (2):**'
+        );
         expect(result.content[0]?.text).toContain('📋 **react-guide**');
         expect(result.content[0]?.text).toContain('📋 **python-guide**');
       });
@@ -252,9 +287,9 @@ describe('ToolHandler', () => {
 
     describe('unknown tools', () => {
       it('should throw error for unknown tool', async () => {
-        await expect(
-          toolHandler.callTool('unknown_tool', {})
-        ).rejects.toThrow('Unknown tool: unknown_tool');
+        await expect(toolHandler.callTool('unknown_tool', {})).rejects.toThrow(
+          'Unknown tool: unknown_tool'
+        );
       });
     });
 
