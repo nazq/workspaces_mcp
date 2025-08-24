@@ -1,58 +1,49 @@
 # 🏠 Workspaces MCP
 
-**The Ultimate Workspace Toolkit for Claude Desktop**
+**Intelligent workspace and context management for Claude Desktop**
 
-Transform how you work with Claude by automatically loading project context, sharing instructions across sessions, and organizing your development workspaces with zero configuration.
+A Model Context Protocol (MCP) server that automatically loads project context, manages workspaces, and provides shared instruction templates for enhanced Claude Desktop workflows.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/nazq/workspaces_mcp/workflows/CI/badge.svg)](https://github.com/nazq/workspaces_mcp/actions)
-[![Release](https://github.com/nazq/workspaces_mcp/workflows/Production%20Release/badge.svg)](https://github.com/nazq/workspaces_mcp/actions)
-[![Version](https://img.shields.io/github/v/release/nazq/workspaces_mcp)](https://github.com/nazq/workspaces_mcp/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/nazq/workspaces_mcp/total)](https://github.com/nazq/workspaces_mcp/releases)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20.10.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-280%20passing-success)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-71.74%25-green)](#testing)
-[![codecov](https://codecov.io/gh/nazq/workspaces_mcp/graph/badge.svg)](https://codecov.io/gh/nazq/workspaces_mcp)
 
 ## ✨ Features
 
-### 🌍 **Auto-Loading Global Context**
-
-- **Global instructions** automatically load in every Claude session
-- Edit once, available everywhere
-- Perfect for coding standards, preferences, and common patterns
-
-### 📁 **Smart Workspace Management**
-
-- **Organize projects** in dedicated workspace folders
-- **Automatic resource discovery** - Claude sees your project structure
-
-### 🔄 **Shared Instruction Templates**
-
-- **Reusable instructions** for different project types
-- **Custom templates** - create your own instruction sets
-
-### 🚀 **DXT Distribution**
-
-- **Official DXT packaging** - follows Anthropic's [DXT standard](https://github.com/anthropics/dxt/blob/main/README.md)
-- **One-click installation** - download [HERE](https://github.com/nazq/workspaces_mcp/releases/latest)
-- **Auto-configures Claude Desktop** - no manual JSON editing
-- **Cross-platform support** (macOS, Windows, Linux)
+- **🌍 Auto-Loading Global Context** - Global instructions automatically load in every Claude session
+- **📁 Smart Workspace Management** - Organize projects with automatic resource discovery
+- **🔄 Shared Instruction Templates** - Reusable instructions for different project types
+- **🚀 DXT Distribution** - Official DXT packaging with one-click installation
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - [Claude Desktop](https://claude.ai/desktop) application
-- [Node.js](https://nodejs.org/) ≥18.0.0 (for development or building from source)
+- [Node.js](https://nodejs.org/) ≥20.10.0 (for development)
+
+**Need to install development tools?** Use our [MCP Core Tools](https://github.com/nazq/mcp-core-tools) for automated cross-platform setup:
+
+```bash
+# Linux/macOS - installs Node.js, npm, and configures Claude Desktop paths
+curl -fsSL https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_linux.sh | bash   # Linux
+curl -fsSL https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_mac.sh | bash     # macOS
+```
+
+```powershell
+# Windows - PowerShell script for complete setup
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_windows.ps1" -OutFile "install.ps1"
+PowerShell -ExecutionPolicy Bypass -File install.ps1
+```
 
 ### Installation
 
-#### 📥 **Option 1: Direct Installation (Recommended)**
+#### 📥 Direct Installation (Recommended)
 
 1. **Download the latest release:**
-   - 🔗 **[Latest Release](https://github.com/nazq/workspaces_mcp/releases/latest)**
+   - [Latest Release](https://github.com/nazq/workspaces_mcp/releases/latest)
    - Download the `workspaces-mcp-X.X.X.dxt` file
 
 2. **Install in Claude Desktop:**
@@ -64,75 +55,40 @@ Transform how you work with Claude by automatically loading project context, sha
 
 3. **Verify installation:**
    - Look for **"🌍 Global Instructions"** in your resources panel
-   - You should see new tools available: `create_workspace`, `list_workspaces`, etc.
+   - New tools available: `create_workspace`, `list_workspaces`, etc.
 
-#### 🛠️ **Option 2: Build from Source**
+#### 🛠️ Build from Source
 
 ```bash
-# 1. Clone and setup
 git clone https://github.com/nazq/workspaces_mcp.git
 cd workspaces_mcp
 npm ci
-
-# 2. Build the DXT package
 npm run dxt:package
-
-# 3. Install the generated .dxt file in Claude Desktop
-# Follow the same steps as Option 1 above
-```
-
-#### 📦 **Option 3: NPM Package**
-
-For developers integrating into other projects:
-
-```bash
-# Install as dependency
-npm install workspaces-mcp
-
-# Or install globally for CLI usage
-npm install -g workspaces-mcp
-```
-
-### Configuration
-
-After installation, you can configure Workspaces MCP through DXT:
-
-```bash
-# View current configuration
-dxt config workspaces-mcp
-
-# Set custom workspaces directory
-dxt config workspaces-mcp --set workspaces_root=~/my-workspaces
-
-# Set logging level
-dxt config workspaces-mcp --set log_level=debug
+# Install the generated .dxt file in Claude Desktop
 ```
 
 ## 📖 Usage
 
-### 1. **Global Instructions**
+### Global Instructions
 
-Edit your global context that loads automatically:
+Global context automatically loads in every Claude session:
 
 ```bash
-# Edit your global instructions
+# Edit your global instructions (created automatically)
 code ~/Documents/workspaces/SHARED_INSTRUCTIONS/GLOBAL.md
 ```
 
-### 2. **Create Workspaces**
+### Workspace Management
 
-Use Claude's built-in tools or create manually:
+Use Claude's built-in tools:
 
-```markdown
-In Claude Desktop, you can now use these tools:
-• create_workspace - Set up new project workspace
-• list_workspaces - See all your workspaces  
-• get_workspace_info - Get workspace details
-• create_shared_instruction - Create reusable templates
-• update_global_instructions - Update global context
-```
+- **`create_workspace`** - Set up new project workspace
+- **`list_workspaces`** - See all your workspaces
+- **`get_workspace_info`** - Get workspace details
+- **`create_shared_instruction`** - Create reusable templates
+- **`update_global_instructions`** - Update global context
 
-### 3. **Workspace Structure**
+### Workspace Structure
 
 ```
 ~/Documents/workspaces/
@@ -149,143 +105,69 @@ In Claude Desktop, you can now use these tools:
     └── data.csv
 ```
 
-### 4. **Resource Loading**
-
-In Claude Desktop, you'll see resources like:
-
-- 🌍 **Global Instructions** (auto-loads)
-- 📋 **react-typescript** (shared template)
-- 📁 **my-react-app** (workspace)
-- 📄 **my-react-app/README.md** (workspace file)
-
 ## 🛠️ Development
 
-### Project Structure
+### Architecture
 
-```
-workspaces-mcp/
-├── packages/
-│   ├── mcp-server/           # MCP protocol server
-│   │   ├── src/
-│   │   │   ├── server/       # MCP handlers
-│   │   │   ├── services/     # Business logic
-│   │   │   ├── utils/        # Utilities
-│   │   │   └── types/        # TypeScript types
-│   │   └── dist/             # Built server
-│   └── dxt-workspaces/       # CLI installer
-│       ├── src/
-│       │   ├── commands/     # CLI commands
-│       │   └── index.ts      # CLI entry point
-│       └── dist/             # Built CLI
-├── scripts/                  # Build scripts
-└── docs/                     # Documentation
-```
+Built with a **5-layer architecture** for maintainability and testability. See [ARCH.md](ARCH.md) for detailed architecture documentation.
 
 ### Available Scripts
 
 ```bash
-# Development
-npm run dev                   # Development mode
-npm run build                 # Build all packages
-npm run test                  # Run tests
-npm run test:coverage         # Test with coverage
+# Core workflow
+npm run ci                    # Full CI pipeline (typecheck, lint, test, build)
+npm run dxt:package          # Build + create DXT package
+npm run dev                  # Development mode
 
-# Code Quality
-npm run lint                  # Lint code
-npm run format                # Format code
-npm run typecheck             # Type checking
-
-# Testing
-npm run test:integration      # Integration tests
-npm run test:ui               # Test UI dashboard
+# Quality checks
+npm run typecheck            # TypeScript validation
+npm run lint                 # ESLint validation
+npm run format               # Prettier formatting
+npm test                     # Run tests
 ```
 
 ### Building from Source
 
 ```bash
-# Install dependencies
 npm install
-
-# Build all packages
 npm run build
-
-# Run tests
 npm test
-
-# Development mode with auto-rebuild
-npm run dev
 ```
 
 ## 🧪 Testing
 
-Enterprise-grade test suite with **280 passing tests** and **71.74% coverage** covering:
+Comprehensive test suite with 258 passing tests and 71.74% coverage:
 
-- **MCP Protocol Implementation** - Request handling, validation, rate limiting
-- **Service Layer** - Workspace and instruction management
-- **File System Operations** - Safe file handling with comprehensive error boundaries
-- **Transport Layer** - STDIO/HTTP with environment detection
-- **CLI Functionality** - Command processing and output formatting
-- **Server Architecture** - 5-layer architecture with dependency injection
-- **Error Handling** - Complete custom error class coverage
-- **Security** - Path traversal protection and input validation
+- MCP Protocol Implementation
+- Service Layer Business Logic
+- File System Operations with Error Boundaries
+- Transport Layer (STDIO/HTTP)
+- CLI Functionality
+- Security (Path traversal protection, input validation)
 
 ```bash
-# Run all tests
-npm test
-
-# Run with coverage report
-npm run test:coverage
-
-# Interactive test UI
-npm run test:ui
-
-# Integration tests
-npm run test:integration
+npm test                     # Run all tests
+npm run test:coverage        # Coverage report
+npm run test:integration     # Integration tests
 ```
-
-## 📦 Releases
-
-### Release Channels
-
-- **🚀 Production**: Stable releases for production use
-  - **Install**: Download from [Latest Release](https://github.com/nazq/workspaces_mcp/releases/latest)
-  - **NPM**: `npm install workspaces-mcp@latest`
-  - **Versioning**: Semantic versioning (v1.0.0, v1.1.0, v2.0.0)
-
-- **🚧 Beta**: Latest development builds for testing
-  - **Install**: Check [Pre-releases](https://github.com/nazq/workspaces_mcp/releases?q=prerelease%3Atrue)
-  - **NPM**: `npm install workspaces-mcp@beta`
-  - **Versioning**: `1.0.0-beta.YYYYMMDDHHMMSS`
-
-### Release Process
-
-1. **Development**: Feature branches → PRs to `main`
-2. **Beta Release**: Automatic on merge to `main`
-3. **Production Release**: Manual tagging (`git tag v1.0.0`)
-4. **Distribution**: NPM package + GitHub release with DXT file
-
-### Changelog
-
-All changes are documented in [CHANGELOG.md](./CHANGELOG.md) following [Keep a Changelog](https://keepachangelog.com/) format.
 
 ## 📁 Configuration
 
+### Environment Variables
+
+- **`WORKSPACES_ROOT`** - Custom workspace directory (default: `~/Documents/workspaces`)
+- **`WORKSPACES_LOG_LEVEL`** - Logging level (`debug`, `info`, `warn`, `error`, `fatal`)
+
 ### Claude Desktop Configuration
 
-The installer automatically configures Claude Desktop at:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
-**Windows**: `%APPDATA%/Claude/claude_desktop_config.json`  
-**Linux**: `~/.config/Claude/claude_desktop_config.json`
-
-Example configuration:
+The DXT installer automatically configures Claude Desktop. Manual configuration example:
 
 ```json
 {
   "mcpServers": {
     "workspaces-mcp": {
       "command": "node",
-      "args": ["/path/to/mcp-server/dist/index.js"],
+      "args": ["/path/to/server/dist/bin/server.js"],
       "env": {
         "WORKSPACES_ROOT": "/path/to/workspaces"
       }
@@ -294,52 +176,23 @@ Example configuration:
 }
 ```
 
-### Environment Variables
+**Config locations:**
 
-- `WORKSPACES_ROOT` - Custom workspace directory path
-- `WORKSPACES_LOG_LEVEL` - Logging level (debug, info, warn, error, fatal)
-
-## 🔧 Advanced Usage
-
-### Custom Templates
-
-Create your own instruction templates:
-
-```bash
-# In Claude Desktop, use:
-create_shared_instruction name="my-template" content="# My Custom Template..."
-```
-
-### Logging
-
-Configure logging levels:
-
-```bash
-# Debug level logging
-WORKSPACES_LOG_LEVEL=debug node packages/mcp-server/dist/index.js
-
-# Production logging (default: info)
-WORKSPACES_LOG_LEVEL=error node packages/mcp-server/dist/index.js
-```
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 ## 🤝 Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### Development Setup
-
 1. Fork and clone the repository
 2. Install dependencies: `npm install`
 3. Create a branch: `git checkout -b feature/amazing-feature`
 4. Make changes and add tests
-5. Run tests: `npm test`
-6. Commit changes: `git commit -m 'Add amazing feature'`
-7. Push to branch: `git push origin feature/amazing-feature`
-8. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+5. Run: `npm run ci`
+6. Commit: `git commit -m 'Add amazing feature'`
+7. Push and open a Pull Request
 
 ## 🐛 Troubleshooting
 
@@ -347,29 +200,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Claude Desktop doesn't show resources:**
 
-- Ensure Claude Desktop is restarted after installation
-- Check that MCP server path is correct in config
-- Verify Node.js ≥18.0.0 is installed
+- Restart Claude Desktop after installation
+- Check Node.js ≥20.10.0 is installed
+- Verify MCP server path in config
 
-**Permission errors during installation:**
+**Permission errors:**
 
 - Run with appropriate permissions for config directory
-- Check file system permissions on workspace directory
+- Check workspace directory permissions
 
 **MCP server not found:**
 
-- Ensure project is built: `npm run build`
-- Verify MCP server exists at expected path
-- Check that Node.js can execute the server binary
+- Build project: `npm run build`
+- Verify server exists at `dist/bin/server.js`
 
 ### Getting Help
 
 - 📖 [Documentation](docs/)
-- 💬 [Discussions](https://github.com/nazq/workspaces-mcp/discussions)
-- 🐛 [Issues](https://github.com/nazq/workspaces-mcp/issues)
+- 💬 [Discussions](https://github.com/nazq/workspaces_mcp/discussions)
+- 🐛 [Issues](https://github.com/nazq/workspaces_mcp/issues)
+
+## 📝 License
+
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
 **Made with ❤️ for the Claude Desktop community**
-
-_Transform your Claude Desktop workflow with intelligent context management_

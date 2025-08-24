@@ -130,3 +130,6 @@ logs
 
 # Husky
 .husky/_
+
+# Development repos
+repos/
