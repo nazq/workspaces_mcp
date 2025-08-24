@@ -82,7 +82,11 @@ export class ProtocolProcessor {
       }
 
       // Execute handler
-      const result = await handler.handle(request as any);
+      // TypeScript can't narrow the union type automatically, so we need to cast
+      // This is safe because the handler was retrieved by method match
+      const result = await handler.handle(
+        request as Parameters<typeof handler.handle>[0]
+      );
 
       const duration = Date.now() - startTime;
       if (this.config.logRequests) {
@@ -177,9 +181,12 @@ export class ProtocolProcessor {
 
     if (error instanceof Error && 'code' in error) {
       mcpError = {
-        code: (error as any).code || McpErrorCode.INTERNAL_ERROR,
+        code:
+          'code' in error
+            ? (error as { code: number }).code
+            : McpErrorCode.INTERNAL_ERROR,
         message: error.message,
-        data: (error as any).data,
+        data: 'data' in error ? (error as { data: unknown }).data : undefined,
       };
     } else {
       mcpError = {

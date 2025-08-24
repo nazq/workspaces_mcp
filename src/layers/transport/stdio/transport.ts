@@ -2,9 +2,12 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import { createChildLogger } from '../../../utils/logger.js';
-import { BaseTransport } from '../base.js';
+import { BaseTransport, InternalTransportProvider } from '../base.js';
 
-export class StdioTransport extends BaseTransport {
+export class StdioTransport
+  extends BaseTransport
+  implements InternalTransportProvider
+{
   readonly name = 'stdio';
   private transport?: StdioServerTransport;
   private logger = createChildLogger('transport:stdio');

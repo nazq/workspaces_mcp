@@ -1,11 +1,11 @@
 // Protocol Handler Registry
 import { createChildLogger } from '../../../utils/logger.js';
-import type { McpHandler, McpMethod } from '../types.js';
+import type { AnyMcpHandler, McpHandler, McpMethod } from '../types.js';
 
 const logger = createChildLogger('protocol:registry');
 
 export class HandlerRegistry {
-  private handlers = new Map<McpMethod, McpHandler<any>>();
+  private handlers = new Map<McpMethod, AnyMcpHandler>();
 
   register<T extends McpMethod>(handler: McpHandler<T>): void {
     logger.debug(`Registering handler for method: ${handler.method}`);
@@ -14,12 +14,12 @@ export class HandlerRegistry {
       logger.warn(`Overriding existing handler for method: ${handler.method}`);
     }
 
-    this.handlers.set(handler.method, handler);
+    this.handlers.set(handler.method, handler as AnyMcpHandler);
     logger.info(`Handler registered for method: ${handler.method}`);
   }
 
   get<T extends McpMethod>(method: T): McpHandler<T> | undefined {
-    return this.handlers.get(method);
+    return this.handlers.get(method) as McpHandler<T> | undefined;
   }
 
   has(method: McpMethod): boolean {

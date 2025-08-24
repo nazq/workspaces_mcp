@@ -1,6 +1,13 @@
 // Controller Factory with Dependency Injection
+import type {
+  CallToolResult,
+  ListResourcesResult,
+  ListToolsResult,
+  ReadResourceResult,
+} from '@modelcontextprotocol/sdk/types.js';
+
 import { createChildLogger } from '../../utils/logger.js';
-import type { McpHandler } from '../protocol/index.js';
+import type { AnyMcpHandler } from '../protocol/index.js';
 
 import { ListResourcesController } from './resources/list-controller.js';
 import { ReadResourceController } from './resources/read-controller.js';
@@ -9,13 +16,13 @@ import { ListToolsController } from './tools/list-controller.js';
 
 // Service interfaces (will be implemented in services layer)
 interface ResourceService {
-  listResources(): Promise<any>;
-  readResource(uri: string): Promise<any>;
+  listResources(): Promise<ListResourcesResult>;
+  readResource(uri: string): Promise<ReadResourceResult>;
 }
 
 interface ToolService {
-  listTools(): Promise<any>;
-  callTool(name: string, arguments_: unknown): Promise<any>;
+  listTools(): Promise<ListToolsResult>;
+  callTool(name: string, arguments_: unknown): Promise<CallToolResult>;
 }
 
 export interface ControllerDependencies {
@@ -26,7 +33,7 @@ export interface ControllerDependencies {
 export class ControllerFactory {
   private static logger = createChildLogger('controller:factory');
 
-  static createAll(dependencies: ControllerDependencies): McpHandler<any>[] {
+  static createAll(dependencies: ControllerDependencies): AnyMcpHandler[] {
     this.logger.info('Creating all controllers with dependency injection');
 
     const controllers = [
@@ -42,7 +49,7 @@ export class ControllerFactory {
 
   static createResourceControllers(
     resourceService: ResourceService
-  ): McpHandler<any>[] {
+  ): AnyMcpHandler[] {
     this.logger.debug('Creating resource controllers');
 
     return [
@@ -51,7 +58,7 @@ export class ControllerFactory {
     ];
   }
 
-  static createToolControllers(toolService: ToolService): McpHandler<any>[] {
+  static createToolControllers(toolService: ToolService): AnyMcpHandler[] {
     this.logger.debug('Creating tool controllers');
 
     return [

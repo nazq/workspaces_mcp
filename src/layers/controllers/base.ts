@@ -10,7 +10,7 @@ export abstract class BaseController<T extends McpMethod>
     `controller:${this.constructor.name.toLowerCase()}`
   );
 
-  abstract handle(request: any): Promise<unknown>;
+  abstract handle(request: unknown): Promise<unknown>;
 
   protected validateRequest(
     request: unknown,

@@ -1,4 +1,6 @@
 // Test MCP Tools Command
+import type { Tool } from '@modelcontextprotocol/sdk/types.js';
+
 import type { ToolService } from '../../services/tool-service.js';
 import { BaseCliCommand, type CliContext } from '../interface.js';
 
@@ -28,14 +30,14 @@ export class TestToolsCommand extends BaseCliCommand {
 
         if (verbose) {
           this.context.output.table(
-            tools.tools.map((tool: any) => ({
+            tools.tools.map((tool: Tool) => ({
               name: tool.name,
               description: tool.description || 'No description',
               'input-schema': tool.inputSchema ? 'defined' : 'none',
             }))
           );
         } else {
-          tools.tools.forEach((tool: any) => {
+          tools.tools.forEach((tool: Tool) => {
             this.context.output.success(
               `${tool.name}: ${tool.description || 'No description'}`
             );
@@ -46,12 +48,12 @@ export class TestToolsCommand extends BaseCliCommand {
 
       // Test specific tool
       const [toolName] = remaining;
-      const tool = tools.tools.find((t: any) => t.name === toolName);
+      const tool = tools.tools.find((t: Tool) => t.name === toolName);
 
       if (!tool) {
         this.context.output.error(`Tool '${toolName}' not found`);
         this.context.output.info('Available tools:');
-        tools.tools.forEach((t: any) =>
+        tools.tools.forEach((t: Tool) =>
           this.context.output.info(`  - ${t.name}`)
         );
         return;
@@ -59,12 +61,12 @@ export class TestToolsCommand extends BaseCliCommand {
 
       this.context.output.info(`Testing tool: ${tool.name}`);
       this.context.output.info(
-        `Description: ${(tool as any).description || 'No description'}`
+        `Description: ${tool.description || 'No description'}`
       );
 
-      if (verbose && (tool as any).inputSchema) {
+      if (verbose && tool.inputSchema) {
         this.context.output.info('Input schema:');
-        this.context.output.json((tool as any).inputSchema);
+        this.context.output.json(tool.inputSchema);
       }
 
       // For tools that don't require complex input, we can test them

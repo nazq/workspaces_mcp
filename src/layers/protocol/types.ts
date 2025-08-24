@@ -57,6 +57,13 @@ export interface McpHandler<T extends McpMethod> {
   handle(request: McpRequestMap[T]): Promise<unknown>;
 }
 
+// Union type for all possible handler types
+export type AnyMcpHandler =
+  | McpHandler<'resources/list'>
+  | McpHandler<'resources/read'>
+  | McpHandler<'tools/list'>
+  | McpHandler<'tools/call'>;
+
 export interface ProtocolConfig {
   validateRequests?: boolean;
   logRequests?: boolean;

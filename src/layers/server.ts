@@ -1,5 +1,6 @@
 // Professional MCP Server with 5-Layer Architecture
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
@@ -25,6 +26,7 @@ import { ProtocolProcessor } from './protocol/index.js';
 import { ResourceService, ToolService } from './services/index.js';
 import {
   TransportFactory,
+  type InternalTransportProvider,
   type TransportFactoryConfig,
 } from './transport/index.js';
 
@@ -164,11 +166,18 @@ export class WorkspacesMcpServer {
 
       // Connect MCP SDK server to transport
       if (transport.name === 'stdio') {
-        const stdioTransport = (transport as any).getInternalTransport();
-        if (stdioTransport) {
-          await this.server.connect(stdioTransport);
+        // Check if transport provides internal transport access
+        if ('getInternalTransport' in transport) {
+          const stdioTransport = (
+            transport as InternalTransportProvider
+          ).getInternalTransport();
+          if (stdioTransport) {
+            await this.server.connect(stdioTransport as Transport);
+          } else {
+            throw new Error('Failed to get STDIO transport');
+          }
         } else {
-          throw new Error('Failed to get STDIO transport');
+          throw new Error('STDIO transport does not provide internal access');
         }
       } else {
         logger.warn('HTTP transport not fully implemented yet');

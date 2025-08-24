@@ -11,6 +11,11 @@ export interface McpTransport {
   onClose(handler: () => void): void;
 }
 
+// Interface for transports that can provide internal MCP SDK transport
+export interface InternalTransportProvider {
+  getInternalTransport(): unknown;
+}
+
 export abstract class BaseTransport implements McpTransport {
   abstract readonly name: string;
   protected _isConnected = false;

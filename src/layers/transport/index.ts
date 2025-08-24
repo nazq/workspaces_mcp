@@ -1,5 +1,9 @@
 // Transport Layer Exports
-export { BaseTransport, type McpTransport } from './base.js';
+export {
+  BaseTransport,
+  type InternalTransportProvider,
+  type McpTransport,
+} from './base.js';
 export {
   TransportFactory,
   type TransportFactoryConfig,
