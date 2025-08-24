@@ -57,9 +57,10 @@ jobs:
         if: matrix.node == 20 && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: 4f85e65f-dc73-4ab5-9cad-15e38babdf30
           files: ./coverage/lcov.info
           fail_ci_if_error: false
+          verbose: true
 
   security:
     name: Security Audit
@@ -119,5 +120,5 @@ jobs:
       - name: Test CLI installation
         run: |
           npm install -g packages/dxt-workspaces/*.tgz
-          dxt-workspaces --version
-          dxt-workspaces --help
+          npx dxt-workspaces --version
+          npx dxt-workspaces --help

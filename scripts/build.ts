@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 import { execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { chmodSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 const packages = ['mcp-server', 'dxt-workspaces'];
@@ -22,6 +22,16 @@ for (const pkg of packages) {
       cwd: pkgPath,
       stdio: 'inherit',
     });
+
+    // Set executable permissions for CLI packages
+    if (pkg === 'dxt-workspaces') {
+      const cliPath = path.join(pkgPath, 'dist', 'index.js');
+      if (existsSync(cliPath)) {
+        chmodSync(cliPath, '755');
+        console.log(`🔧 Set executable permissions for ${cliPath}`);
+      }
+    }
+
     console.log(`✅ ${pkg} built successfully\n`);
   } catch (error) {
     console.error(`❌ Failed to build ${pkg}:`, error);
