@@ -13,7 +13,7 @@ describe('CLI Install Integration Tests', () => {
     tempDir = await fs.mkdtemp(path.join(process.cwd(), 'cli-test-'));
 
     // Get CLI path
-    cliPath = path.resolve('packages/dxt-workspaces/dist/index.js');
+    cliPath = path.resolve('dist/bin/cli.js');
 
     // Ensure CLI is built
     if (!(await fs.pathExists(cliPath))) {
@@ -161,7 +161,7 @@ describe('CLI Install Integration Tests', () => {
 
     it('should validate MCP server exists', async () => {
       // Move MCP server temporarily to simulate missing server
-      const mcpServerPath = path.resolve('packages/mcp-server/dist/index.js');
+      const mcpServerPath = path.resolve('dist/bin/server.js');
       const backupPath = mcpServerPath + '.backup';
 
       if (await fs.pathExists(mcpServerPath)) {

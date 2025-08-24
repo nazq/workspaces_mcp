@@ -50,8 +50,12 @@ jobs:
       - name: Unit tests
         run: npx vitest run --exclude="**/logger.test.ts" --exclude="**/index.test.ts" --exclude="**/mcp-protocol.test.ts" --coverage
 
-      # - name: Integration tests
-      #   run: npx vitest run --config vitest.integration.config.ts --exclude="**/mcp-protocol.test.ts" --exclude="**/cli-install.test.ts"
+      - name: MCP Protocol Integration tests
+        run: npx vitest run tests/integration/mcp-protocol.test.ts --config vitest.integration.config.ts
+
+      # CLI integration tests still need fixes
+      # - name: CLI Integration tests
+      #   run: npx vitest run tests/integration/cli-install.test.ts --config vitest.integration.config.ts
 
       - name: Upload coverage to Codecov
         if: matrix.node == 20 && matrix.os == 'ubuntu-latest'

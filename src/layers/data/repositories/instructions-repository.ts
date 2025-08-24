@@ -1,6 +1,7 @@
 // Instructions Repository Implementation
 import path from 'node:path';
 
+import { LLM_DIRECTIVE_HEADER } from '../../../config/constants.js';
 import { createChildLogger } from '../../../utils/logger.js';
 import type {
   FileSystemProvider,
@@ -35,14 +36,17 @@ export class FileSystemInstructionsRepository
       const instructions: SharedInstructionMetadata[] = [];
 
       for (const entry of entries) {
-        if (entry.endsWith('.json')) {
-          const name = path.basename(entry, '.json');
+        if (entry.endsWith('.md') && entry !== 'GLOBAL.md') {
+          const name = path.basename(entry, '.md');
           const filePath = path.join(this.sharedInstructionsPath, entry);
 
           try {
             const stats = await this.fs.getStats(filePath);
             const content = await this.fs.readFile(filePath);
-            const instruction = JSON.parse(content) as SharedInstruction;
+            const instruction = this.parseSharedInstructionFromMarkdown(
+              content,
+              name
+            );
 
             instructions.push({
               name,
@@ -91,7 +95,7 @@ export class FileSystemInstructionsRepository
     name: string,
     instruction: SharedInstruction
   ): Promise<void> {
-    const filePath = path.join(this.sharedInstructionsPath, `${name}.json`);
+    const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
     try {
       logger.debug(`Creating shared instruction: ${name}`);
@@ -104,13 +108,11 @@ export class FileSystemInstructionsRepository
         throw new Error(`Shared instruction '${name}' already exists`);
       }
 
-      // Ensure name matches
-      const instructionData = { ...instruction, name };
+      // Create markdown content with strong LLM directive
+      const markdownContent =
+        this.formatSharedInstructionAsMarkdown(instruction);
 
-      await this.fs.writeFile(
-        filePath,
-        JSON.stringify(instructionData, null, 2)
-      );
+      await this.fs.writeFile(filePath, markdownContent);
       logger.info(`Shared instruction created: ${name}`);
     } catch (error) {
       logger.error(`Failed to create shared instruction: ${name}`, error);
@@ -153,7 +155,14 @@ export class FileSystemInstructionsRepository
       }
 
       const content = await this.fs.readFile(this.globalInstructionsPath);
-      const instructions = JSON.parse(content) as GlobalInstructions;
+      // Parse markdown content - extract everything after the directive header
+      const markdownContent = content.startsWith(LLM_DIRECTIVE_HEADER)
+        ? content.substring(LLM_DIRECTIVE_HEADER.length)
+        : content;
+      const instructions: GlobalInstructions = {
+        content: markdownContent,
+        variables: {},
+      };
 
       logger.debug('Retrieved global instructions');
       return instructions;
@@ -179,6 +188,74 @@ export class FileSystemInstructionsRepository
     } catch (error) {
       logger.error('Failed to update global instructions', error);
       throw new Error('Unable to update global instructions');
+    }
+  }
+
+  /**
+   * Format shared instruction as markdown with strong LLM directive
+   */
+  private formatSharedInstructionAsMarkdown(
+    instruction: SharedInstruction
+  ): string {
+    const header = `${LLM_DIRECTIVE_HEADER}# ${instruction.name}
+
+`;
+    const description = instruction.description
+      ? `> ${instruction.description}\n\n`
+      : '';
+    const content = instruction.content;
+
+    return `${header}${description}${content}`;
+  }
+
+  /**
+   * Parse shared instruction from markdown content
+   */
+  private parseSharedInstructionFromMarkdown(
+    content: string,
+    name: string
+  ): SharedInstruction {
+    try {
+      // Remove the LLM directive header
+      let cleanContent = content;
+      if (content.startsWith(LLM_DIRECTIVE_HEADER)) {
+        cleanContent = content.substring(LLM_DIRECTIVE_HEADER.length);
+      }
+
+      // Extract description from markdown (looking for > quoted text)
+      let description: string | undefined;
+      const descriptionMatch = cleanContent.match(/^>\s*(.+)$/m);
+      if (descriptionMatch) {
+        description = descriptionMatch[1].trim();
+        // Remove the description line from content
+        cleanContent = cleanContent.replace(/^>\s*.+$/m, '').trim();
+      }
+
+      // Remove the title line if it matches the name (more flexible matching)
+      const titlePattern = new RegExp(
+        `^#\s+${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\s*$`,
+        'im'
+      );
+      cleanContent = cleanContent.replace(titlePattern, '').trim();
+
+      return {
+        name,
+        description,
+        content: cleanContent,
+        variables: {},
+      };
+    } catch (error) {
+      logger.error(
+        `Error parsing shared instruction markdown for ${name}:`,
+        error
+      );
+      // Return a minimal valid instruction if parsing fails
+      return {
+        name,
+        description: undefined,
+        content,
+        variables: {},
+      };
     }
   }
 }
