@@ -35,7 +35,9 @@
     "test:all": "tsx scripts/test-all.ts",
     "validate:release": "tsx scripts/validate-release.ts",
     "dev:mcp": "tsx watch packages/mcp-server/src/index.ts",
-    "dev:dxt": "tsx watch packages/dxt-workspaces/src/index.ts"
+    "dxt:install": "npm install -g @anthropic/dxt",
+    "dxt:build": "dxt pack . --output workspaces-mcp.dxt",
+    "dxt:package": "run-s build dxt:install dxt:build"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.8",

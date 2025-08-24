@@ -1,0 +1,74 @@
+{
+  "dxt_version": "0.1",
+  "name": "workspaces-mcp",
+  "display_name": "Workspaces MCP",
+  "version": "1.0.0",
+  "description": "Intelligent workspace management and automatic context loading for Claude Desktop",
+  "long_description": "# Workspaces MCP\n\nA Model Context Protocol (MCP) server that provides intelligent workspace management and automatic context loading for Claude Desktop. Organize your development projects, manage shared instruction templates, and seamlessly load contextual information into Claude conversations.\n\n## Features\n\n- **Automatic Context Loading**: Instantly load project context into Claude conversations\n- **Workspace Organization**: Structured project management with templates\n- **Shared Instructions**: Reusable instruction templates for different project types\n- **Global Configuration**: Centralized settings that apply across all workspaces\n- **Developer-Friendly**: Built with TypeScript, comprehensive testing, and modern tooling\n\n## Perfect For\n\n- Software developers managing multiple projects\n- Teams sharing common development patterns\n- Anyone wanting organized, contextual AI conversations\n- Projects requiring consistent coding standards and practices",
+  "author": {
+    "name": "Workspaces MCP Contributors",
+    "url": "https://github.com/nazq/workspaces_mcp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nazq/workspaces_mcp"
+  },
+  "homepage": "https://github.com/nazq/workspaces_mcp",
+  "documentation": "https://github.com/nazq/workspaces_mcp#readme",
+  "support": "https://github.com/nazq/workspaces_mcp/issues",
+  "server": {
+    "type": "node",
+    "entry_point": "packages/mcp-server/dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/packages/mcp-server/dist/index.js"],
+      "env": {
+        "WORKSPACES_ROOT": "${user_config.workspaces_root}",
+        "WORKSPACES_LOG_LEVEL": "${user_config.log_level}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "create_workspace",
+      "description": "Create a new workspace with optional description and template"
+    },
+    {
+      "name": "list_workspaces",
+      "description": "List all available workspaces"
+    },
+    {
+      "name": "get_workspace_info",
+      "description": "Get detailed information about a specific workspace"
+    },
+    {
+      "name": "create_shared_instruction",
+      "description": "Create a new shared instruction template"
+    },
+    {
+      "name": "list_shared_instructions",
+      "description": "List all available shared instruction templates"
+    },
+    {
+      "name": "update_global_instructions",
+      "description": "Update global instructions that apply to all workspaces"
+    }
+  ],
+  "user_config": [
+    {
+      "key": "workspaces_root",
+      "name": "Workspaces Directory",
+      "description": "Root directory where all workspaces will be stored",
+      "type": "string",
+      "default": "~/Documents/workspaces"
+    },
+    {
+      "key": "log_level",
+      "name": "Log Level",
+      "description": "Logging verbosity level",
+      "type": "string",
+      "enum": ["debug", "info", "warn", "error"],
+      "default": "info"
+    }
+  ]
+}

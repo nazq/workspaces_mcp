@@ -31,9 +31,10 @@ Transform how you work with Claude by automatically loading project context, sha
 - **Template library** with React TypeScript, Python Data Science, Node.js API patterns
 - **Custom templates** - create your own instruction sets
 
-### 🚀 **Zero Configuration Setup**
+### 🚀 **DXT Distribution**
 
-- **One-command installation** with `dxt-workspaces install`
+- **Official DXT packaging** - follows Anthropic's distribution standard
+- **One-command installation** with `dxt install workspaces-mcp.dxt`
 - **Auto-configures Claude Desktop** - no manual JSON editing
 - **Cross-platform support** (macOS, Windows, Linux)
 
@@ -47,29 +48,51 @@ Transform how you work with Claude by automatically loading project context, sha
 
 ### Installation
 
+#### Option 1: Install from Release (Recommended)
+
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/workspaces-mcp.git
-cd workspaces-mcp
+# 1. Install DXT CLI
+npm install -g @anthropic/dxt
 
-# 2. Install dependencies
-npm install
+# 2. Download the latest workspaces-mcp.dxt from releases
 
-# 3. Build the project
-npm run build
+# 3. Install the extension
+dxt install workspaces-mcp.dxt
 
-# 4. Install and configure Workspaces MCP
-node packages/dxt-workspaces/dist/index.js install
-
-# 5. Restart Claude Desktop
+# 4. Restart Claude Desktop
 # Look for "🌍 Global Instructions" in your resources!
 ```
 
-### Custom Installation Path
+#### Option 2: Build from Source
 
 ```bash
-# Install to a custom directory
-node packages/dxt-workspaces/dist/index.js install --path ~/my-workspaces
+# 1. Clone the repository
+git clone https://github.com/nazq/workspaces_mcp.git
+cd workspaces_mcp
+
+# 2. Install dependencies and build
+npm ci
+npm run dxt:package
+
+# 3. Install the extension
+dxt install workspaces-mcp.dxt
+
+# 4. Restart Claude Desktop
+```
+
+### Configuration
+
+After installation, you can configure Workspaces MCP through DXT:
+
+```bash
+# View current configuration
+dxt config workspaces-mcp
+
+# Set custom workspaces directory
+dxt config workspaces-mcp --set workspaces_root=~/my-workspaces
+
+# Set logging level
+dxt config workspaces-mcp --set log_level=debug
 ```
 
 ## 📖 Usage

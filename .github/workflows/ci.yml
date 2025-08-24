@@ -88,7 +88,7 @@ jobs:
         run: npx audit-ci --config .auditci.json
 
   build-and-package:
-    name: Build and Package
+    name: Build and Package DXT
     runs-on: ubuntu-latest
     needs: [test]
 
@@ -105,34 +105,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build packages
-        run: npm run build
-
-      - name: Package CLI
+      - name: Validate manifest
         run: |
-          cd packages/dxt-workspaces
-          npm pack
+          echo "🔍 Validating manifest.json..."
+          if [ ! -f manifest.json ]; then
+            echo "❌ manifest.json not found"
+            exit 1
+          fi
+          echo "✅ manifest.json found"
+          cat manifest.json | jq '.' > /dev/null || (echo "❌ Invalid JSON in manifest.json" && exit 1)
+          echo "✅ manifest.json is valid JSON"
 
-      - name: Upload CLI package
+      - name: Build DXT package
+        run: |
+          echo "📦 Building DXT package..."
+          npm run dxt:package
+          ls -la workspaces-mcp.dxt
+
+      - name: Upload DXT package
         uses: actions/upload-artifact@v4
         with:
-          name: dxt-workspaces-package
-          path: packages/dxt-workspaces/*.tgz
-
-      - name: Test CLI installation
-        run: |
-          npm install -g packages/dxt-workspaces/*.tgz
-          echo "Debugging paths:"
-          echo "npm prefix: $(npm prefix -g)"
-          echo "Looking for installed files:"
-          find $(npm prefix -g) -name "index.js" | grep dxt-workspaces || echo "No index.js found"
-          find $(npm prefix -g) -path "*/dxt-workspaces/*" -name "*.js" || echo "No dxt-workspaces JS files found"
-          echo "Creating bin directory:"
-          mkdir -p $(npm prefix -g)/bin
-          echo "Creating symlink with correct path:"
-          ACTUAL_CLI_PATH=$(find $(npm prefix -g) -path "*/dxt-workspaces/dist/index.js")
-          echo "CLI path found: $ACTUAL_CLI_PATH"
-          ln -sf "$ACTUAL_CLI_PATH" $(npm prefix -g)/bin/dxt-workspaces
-          echo "Testing CLI:"
-          $(npm prefix -g)/bin/dxt-workspaces --version
-          $(npm prefix -g)/bin/dxt-workspaces --help
+          name: workspaces-mcp-dxt
+          path: workspaces-mcp.dxt
