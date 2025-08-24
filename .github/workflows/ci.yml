@@ -122,12 +122,17 @@ jobs:
       - name: Test CLI installation
         run: |
           npm install -g packages/dxt-workspaces/*.tgz
-          echo "Creating bin directory if missing:"
+          echo "Debugging paths:"
+          echo "npm prefix: $(npm prefix -g)"
+          echo "Looking for installed files:"
+          find $(npm prefix -g) -name "index.js" | grep dxt-workspaces || echo "No index.js found"
+          find $(npm prefix -g) -path "*/dxt-workspaces/*" -name "*.js" || echo "No dxt-workspaces JS files found"
+          echo "Creating bin directory:"
           mkdir -p $(npm prefix -g)/bin
-          echo "Manually creating symlink:"
-          ln -sf $(npm prefix -g)/lib/node_modules/dxt-workspaces/dist/index.js $(npm prefix -g)/bin/dxt-workspaces
-          echo "Setting executable permissions:"
-          chmod +x $(npm prefix -g)/bin/dxt-workspaces
-          echo "Testing CLI commands:"
-          dxt-workspaces --version
-          dxt-workspaces --help
+          echo "Creating symlink with correct path:"
+          ACTUAL_CLI_PATH=$(find $(npm prefix -g) -path "*/dxt-workspaces/dist/index.js")
+          echo "CLI path found: $ACTUAL_CLI_PATH"
+          ln -sf "$ACTUAL_CLI_PATH" $(npm prefix -g)/bin/dxt-workspaces
+          echo "Testing CLI:"
+          $(npm prefix -g)/bin/dxt-workspaces --version
+          $(npm prefix -g)/bin/dxt-workspaces --help
