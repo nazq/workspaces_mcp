@@ -7,7 +7,8 @@ Transform how you work with Claude by automatically loading project context, sha
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-145%20passing-success)](#testing)
+[![Tests](https://img.shields.io/badge/tests-148%20passing-success)](#testing)
+[![codecov](https://codecov.io/gh/nazq/workspaces_mcp/graph/badge.svg)](https://codecov.io/gh/nazq/workspaces_mcp)
 
 ## ✨ Features
 

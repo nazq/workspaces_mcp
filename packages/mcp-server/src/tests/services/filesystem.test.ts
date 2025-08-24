@@ -107,7 +107,7 @@ describe('FileSystemService', () => {
       expect(files).toHaveLength(3);
       expect(files).toContain('file1.txt');
       expect(files).toContain('file2.md');
-      expect(files).toContain('subdir/file3.txt');
+      expect(files).toContain(path.join('subdir', 'file3.txt'));
     });
   });
 });

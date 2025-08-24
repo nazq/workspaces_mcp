@@ -121,7 +121,7 @@ export const handleInstall = async (options: InstallOptions): Promise<void> => {
     // Ensure Claude config directory exists
     await fs.ensureDir(claudeConfigDir);
 
-    let claudeConfig: Record<string, any> = {};
+    let claudeConfig: Record<string, unknown> = {};
     if (await fs.pathExists(claudeConfigPath)) {
       try {
         const existingConfig = await fs.readFile(claudeConfigPath, 'utf8');
