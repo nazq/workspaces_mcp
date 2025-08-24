@@ -17,47 +17,91 @@ A Model Context Protocol (MCP) server that automatically loads project context, 
 - **🔄 Shared Instruction Templates** - Reusable instructions for different project types
 - **🚀 DXT Distribution** - Official DXT packaging with one-click installation
 
-## 🚀 Quick Start
+## ⚡ Quick Start for Claude Desktop Users
+
+**Just want to use this with Claude Desktop?** Follow these 3 simple steps:
+
+### Step 1: Open Your Terminal
+
+<details>
+<summary><strong>🪟 Windows</strong></summary>
+
+1. Press `Windows key + R`
+2. Type `powershell` and press Enter
+3. A blue terminal window will open
+
+</details>
+
+<details>
+<summary><strong>🍎 macOS</strong></summary>
+
+1. Press `Cmd + Space` to open Spotlight
+2. Type `Terminal` and press Enter
+3. A terminal window will open
+
+</details>
+
+<details>
+<summary><strong>🐧 Linux</strong></summary>
+
+1. Press `Ctrl + Alt + T`
+2. Or search for "Terminal" in your applications
+3. A terminal window will open
+
+</details>
+
+### Step 2: Run the Installation Script
+
+Copy and paste the command for your operating system:
+
+**Windows (PowerShell):**
+
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_windows.ps1" -OutFile "install.ps1"; PowerShell -ExecutionPolicy Bypass -File install.ps1
+```
+
+**macOS:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_mac.sh | bash
+```
+
+**Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_linux.sh | bash
+```
+
+This will:
+
+- ✅ Install Node.js (if needed)
+- ✅ Download and build the MCP server
+- ✅ Configure Claude Desktop automatically
+- ✅ Set up your workspace folders
+
+### Step 3: Restart Claude Desktop
+
+1. **Close Claude Desktop completely**
+2. **Reopen Claude Desktop**
+3. **Look for "🌍 Global Instructions"** in your resources panel
+4. **Click it** to load your workspace context automatically
+
+🎉 **Done!** You now have intelligent workspace management in Claude Desktop.
+
+**What happens next?** Claude will automatically load context from your `~/Documents/workspaces/SHARED_INSTRUCTIONS/GLOBAL.md` file in every session. You can edit this file to customize your global instructions.
+
+---
+
+## 🛠️ Developer Quick Start
+
+**Want to contribute or build from source?**
 
 ### Prerequisites
 
+- [Node.js](https://nodejs.org/) ≥20.10.0
 - [Claude Desktop](https://claude.ai/desktop) application
-- [Node.js](https://nodejs.org/) ≥20.10.0 (for development)
 
-**Need to install development tools?** Use our [MCP Core Tools](https://github.com/nazq/mcp-core-tools) for automated cross-platform setup:
-
-```bash
-# Linux/macOS - installs Node.js, npm, and configures Claude Desktop paths
-curl -fsSL https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_linux.sh | bash   # Linux
-curl -fsSL https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_mac.sh | bash     # macOS
-```
-
-```powershell
-# Windows - PowerShell script for complete setup
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nazq/mcp-core-tools/main/scripts/install_windows.ps1" -OutFile "install.ps1"
-PowerShell -ExecutionPolicy Bypass -File install.ps1
-```
-
-### Installation
-
-#### 📥 Direct Installation (Recommended)
-
-1. **Download the latest release:**
-   - [Latest Release](https://github.com/nazq/workspaces_mcp/releases/latest)
-   - Download the `workspaces-mcp-X.X.X.dxt` file
-
-2. **Install in Claude Desktop:**
-   - Open Claude Desktop
-   - Go to **Settings** → **Extensions**
-   - Click **"Install from file"**
-   - Select the downloaded `.dxt` file
-   - Restart Claude Desktop
-
-3. **Verify installation:**
-   - Look for **"🌍 Global Instructions"** in your resources panel
-   - New tools available: `create_workspace`, `list_workspaces`, etc.
-
-#### 🛠️ Build from Source
+### Build from Source
 
 ```bash
 git clone https://github.com/nazq/workspaces_mcp.git
