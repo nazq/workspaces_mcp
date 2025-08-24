@@ -233,7 +233,7 @@ export class FileSystemInstructionsRepository
 
       // Remove the title line if it matches the name (more flexible matching)
       const titlePattern = new RegExp(
-        `^#\s+${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\s*$`,
+        `^#\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`,
         'im'
       );
       cleanContent = cleanContent.replace(titlePattern, '').trim();
