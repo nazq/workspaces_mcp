@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build artifacts
+dist/
+*.tgz
+
+# Coverage reports
+coverage/
+
+# Cache
+.cache/
+.eslintcache
+
+# GitHub workflows (sensitive YAML syntax)
+.github/workflows/
+
+# Other sensitive YAML files
+codecov.yml
+
+# Temporary files
+*.tmp
+*.temp

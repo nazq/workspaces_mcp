@@ -5,7 +5,6 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import type { ZodSchema } from 'zod';
 
 import { createChildLogger } from '../../utils/logger.js';
 
@@ -14,12 +13,12 @@ import { McpErrorCode, type McpMethod, type McpRequestMap } from './types.js';
 const logger = createChildLogger('protocol:validator');
 
 // Schema mapping for validation
-const SCHEMA_MAP: Record<McpMethod, ZodSchema> = {
+const SCHEMA_MAP = {
   'resources/list': ListResourcesRequestSchema,
   'resources/read': ReadResourceRequestSchema,
   'tools/list': ListToolsRequestSchema,
   'tools/call': CallToolRequestSchema,
-};
+} as const;
 
 export class RequestValidator {
   static validate<T extends McpMethod>(
@@ -38,7 +37,7 @@ export class RequestValidator {
     }
 
     try {
-      const result = schema.parse(request);
+      const result = schema.parse(request) as McpRequestMap[T];
       logger.debug(`Request validation successful for method: ${method}`);
       return result;
     } catch (error) {
