@@ -120,10 +120,10 @@ jobs:
         run: |
           echo "📦 Building DXT package..."
           npm run dxt:package
-          ls -la workspaces-mcp.dxt
+          ls -la *.dxt
 
       - name: Upload DXT package
         uses: actions/upload-artifact@v4
         with:
           name: workspaces-mcp-dxt
-          path: workspaces-mcp.dxt
+          path: '*.dxt'

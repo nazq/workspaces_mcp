@@ -54,21 +54,18 @@
       "description": "Update global instructions that apply to all workspaces"
     }
   ],
-  "user_config": [
-    {
-      "key": "workspaces_root",
-      "name": "Workspaces Directory",
+  "user_config": {
+    "workspaces_root": {
+      "title": "Workspaces Directory",
       "description": "Root directory where all workspaces will be stored",
       "type": "string",
       "default": "~/Documents/workspaces"
     },
-    {
-      "key": "log_level",
-      "name": "Log Level",
+    "log_level": {
+      "title": "Log Level",
       "description": "Logging verbosity level",
       "type": "string",
-      "enum": ["debug", "info", "warn", "error"],
       "default": "info"
     }
-  ]
+  }
 }
