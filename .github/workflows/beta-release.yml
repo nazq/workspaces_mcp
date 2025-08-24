@@ -15,6 +15,10 @@ jobs:
     name: Beta Release
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
 
     steps:
       - name: Checkout

@@ -19,6 +19,10 @@ jobs:
   production-release:
     name: Production Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
 
     steps:
       - name: Checkout
