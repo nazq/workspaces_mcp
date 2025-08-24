@@ -7,6 +7,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
+      include: ['src/**/*.ts'],
       exclude: [
         'node_modules/',
         'dist/',
@@ -15,6 +16,7 @@ export default defineConfig({
         '**/*.d.ts',
         'tests/fixtures/**',
         'scripts/**',
+        'src/tests/**',
       ],
       thresholds: {
         global: {
@@ -30,7 +32,8 @@ export default defineConfig({
       'node_modules',
       'dist',
       'cypress',
-      'tests/integration/**/*.test.ts',
+      'tests/integration/install.test.ts',
+      'tests/integration/mcp-protocol.test.ts',
       '**/index.test.ts',
       '**/mcp-protocol.test.ts',
     ],

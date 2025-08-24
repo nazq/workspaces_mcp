@@ -128,9 +128,11 @@ describe('BaseController', () => {
 
     it('should log error with context', () => {
       const controller = new TestController();
-      const consoleSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+
+      // The logger writes to stderr, not console.error
+      const stderrSpy = vi
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true);
 
       try {
         controller.testHandleError(new Error('Test error'), 'test context');
@@ -138,8 +140,8 @@ describe('BaseController', () => {
         // Expected to throw
       }
 
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
+      expect(stderrSpy).toHaveBeenCalled();
+      stderrSpy.mockRestore();
     });
 
     it('should handle null/undefined errors', () => {

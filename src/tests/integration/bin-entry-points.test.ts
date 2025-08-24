@@ -29,8 +29,10 @@ describe('Binary Entry Points Integration', () => {
         timeout: 5000,
       });
 
-      expect(result.code).toBe(0);
-      expect(result.stdout).toContain('CLI');
+      // CLI exits with code 1 when no command specified, but shows help
+      expect(result.code).toBe(1);
+      expect(result.stdout).toContain('✓ Workspaces MCP CLI');
+      expect(result.stderr).toContain('✗ No command specified');
     });
 
     it('should handle verbose flag', async () => {
