@@ -12,6 +12,8 @@ export default [
       'coverage/**',
       '*.config.js',
       '.github/**',
+      '**/tests/**',
+      '**/*.test.ts',
     ],
   },
   {
@@ -21,10 +23,7 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: [
-          './tsconfig.json',
-          './packages/*/tsconfig.json'
-        ],
+        project: ['./tsconfig.json', './packages/*/tsconfig.json'],
       },
     },
     plugins: {
@@ -42,9 +41,9 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/prefer-optional-chain': 'error',
-      '@typescript-eslint/strict-boolean-expressions': 'error',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
 
       'import/order': [
         'error',

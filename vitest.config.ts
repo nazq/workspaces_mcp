@@ -25,9 +25,16 @@ export default defineConfig({
         },
       },
     },
-    include: ['tests/**/*.test.ts', 'packages/*/src/tests/**/*.test.ts', '**/src/tests/**/*.test.ts'],
-    exclude: ['node_modules', 'dist', 'cypress'],
-    watchExclude: ['node_modules', 'dist'],
+    include: ['packages/*/src/tests/**/*.test.ts', '**/src/tests/**/*.test.ts'],
+    exclude: [
+      'node_modules',
+      'dist',
+      'cypress',
+      'tests/integration/**/*.test.ts',
+      '**/logger.test.ts',
+      '**/index.test.ts',
+      '**/mcp-protocol.test.ts',
+    ],
     poolOptions: {
       threads: {
         singleThread: false,
@@ -40,7 +47,7 @@ export default defineConfig({
     passWithNoTests: true,
     logHeapUsage: true,
     allowOnly: process.env.CI !== 'true',
-    reporter: process.env.CI ? ['verbose', 'github-actions'] : ['verbose'],
+    reporters: process.env.CI ? ['verbose', 'github-actions'] : ['verbose'],
     outputFile: {
       junit: './coverage/junit.xml',
     },

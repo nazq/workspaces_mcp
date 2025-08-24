@@ -1,7 +1,6 @@
-import chalk from 'chalk';
 import fs from 'fs-extra';
 import ora from 'ora';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { handleInstall } from '../../commands/install.js';
 
@@ -92,7 +91,9 @@ describe('install command', () => {
       expect(consoleSpy.log).toHaveBeenCalledWith(
         '2. Look for "🌍 Global Instructions" in resources'
       );
-      expect(consoleSpy.log).toHaveBeenCalledWith('3. Click to load your global context');
+      expect(consoleSpy.log).toHaveBeenCalledWith(
+        '3. Click to load your global context'
+      );
       expect(consoleSpy.log).toHaveBeenCalledWith(
         '4. Edit global instructions in your workspaces directory'
       );
@@ -153,9 +154,7 @@ describe('install command', () => {
     });
 
     it('should accept path option', async () => {
-      await expect(() =>
-        handleInstall({ path: '/custom/path' })
-      ).not.toThrow();
+      await expect(() => handleInstall({ path: '/custom/path' })).not.toThrow();
     });
   });
 

@@ -19,9 +19,10 @@ export default defineConfig({
       },
     },
     coverage: {
+      provider: 'v8',
       enabled: false, // Disable coverage for integration tests
     },
-    reporter: ['verbose'],
+    reporters: ['verbose'],
   },
   esbuild: {
     target: 'node18',

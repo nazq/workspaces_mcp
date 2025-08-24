@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the install command handler
 vi.mock('../commands/install.js', () => ({
@@ -85,9 +85,12 @@ describe('DXT CLI', () => {
             // Mock action
           });
 
-        testProgram.parse(['node', 'dxt-workspaces', 'install', '--path', '/custom/path'], {
-          from: 'node',
-        });
+        testProgram.parse(
+          ['node', 'dxt-workspaces', 'install', '--path', '/custom/path'],
+          {
+            from: 'node',
+          }
+        );
       }).not.toThrow();
     });
   });

@@ -19,7 +19,6 @@ const createArchive = async (
     execSync(
       `cd "${sourceDir}" && zip -r "../${path.basename(targetFile)}" .`,
       {
-        shell: true,
         stdio: 'inherit',
       }
     );
@@ -38,7 +37,6 @@ const main = async () => {
   for (const { platform, arch } of platforms) {
     const outputDir = path.join('dist', `dxt-workspaces-${platform}-${arch}`);
     const isWindows = platform === 'win32';
-    const executable = `dxt-workspaces${isWindows ? '.exe' : ''}`;
 
     console.log(`🔨 Creating package for ${platform}-${arch}...`);
 

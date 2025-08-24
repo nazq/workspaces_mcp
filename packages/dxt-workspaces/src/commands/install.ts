@@ -20,12 +20,29 @@ const getDefaultWorkspacesRoot = (customPath?: string): string => {
 const getClaudeConfigPath = (): string => {
   const platform = process.platform;
   if (platform === 'darwin') {
-    return path.join(homedir(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+    return path.join(
+      homedir(),
+      'Library',
+      'Application Support',
+      'Claude',
+      'claude_desktop_config.json'
+    );
   } else if (platform === 'win32') {
-    return path.join(homedir(), 'AppData', 'Roaming', 'Claude', 'claude_desktop_config.json');
+    return path.join(
+      homedir(),
+      'AppData',
+      'Roaming',
+      'Claude',
+      'claude_desktop_config.json'
+    );
   } else {
     // Linux
-    return path.join(homedir(), '.config', 'Claude', 'claude_desktop_config.json');
+    return path.join(
+      homedir(),
+      '.config',
+      'Claude',
+      'claude_desktop_config.json'
+    );
   }
 };
 
@@ -67,20 +84,29 @@ export const handleInstall = async (options: InstallOptions): Promise<void> => {
     // Step 1: Create workspaces directory structure
     spinner.text = 'Creating workspaces directory structure...';
     await fs.ensureDir(workspacesRoot);
-    
-    const sharedInstructionsDir = path.join(workspacesRoot, 'SHARED_INSTRUCTIONS');
+
+    const sharedInstructionsDir = path.join(
+      workspacesRoot,
+      'SHARED_INSTRUCTIONS'
+    );
     await fs.ensureDir(sharedInstructionsDir);
-    
+
     // Create default global instructions if they don't exist
-    const globalInstructionsPath = path.join(sharedInstructionsDir, 'GLOBAL.md');
+    const globalInstructionsPath = path.join(
+      sharedInstructionsDir,
+      'GLOBAL.md'
+    );
     if (!(await fs.pathExists(globalInstructionsPath))) {
       await fs.writeFile(globalInstructionsPath, DEFAULT_GLOBAL_INSTRUCTIONS);
     }
 
     // Step 2: Get MCP server path (assumes it's built)
     spinner.text = 'Locating MCP server...';
-    const mcpServerPath = path.resolve(__dirname, '../../../mcp-server/dist/index.js');
-    
+    const mcpServerPath = path.resolve(
+      __dirname,
+      '../../../mcp-server/dist/index.js'
+    );
+
     if (!(await fs.pathExists(mcpServerPath))) {
       throw new Error(
         `MCP server not found at ${mcpServerPath}. Please build the project first with 'npm run build'.`
@@ -91,17 +117,21 @@ export const handleInstall = async (options: InstallOptions): Promise<void> => {
     spinner.text = 'Configuring Claude Desktop...';
     const claudeConfigPath = getClaudeConfigPath();
     const claudeConfigDir = path.dirname(claudeConfigPath);
-    
+
     // Ensure Claude config directory exists
     await fs.ensureDir(claudeConfigDir);
-    
-    let claudeConfig: any = {};
+
+    let claudeConfig: Record<string, any> = {};
     if (await fs.pathExists(claudeConfigPath)) {
       try {
         const existingConfig = await fs.readFile(claudeConfigPath, 'utf8');
         claudeConfig = JSON.parse(existingConfig);
-      } catch (error) {
-        console.warn(chalk.yellow('Warning: Could not parse existing Claude config, creating new one'));
+      } catch {
+        console.warn(
+          chalk.yellow(
+            'Warning: Could not parse existing Claude config, creating new one'
+          )
+        );
       }
     }
 
@@ -114,8 +144,8 @@ export const handleInstall = async (options: InstallOptions): Promise<void> => {
       command: 'node',
       args: [mcpServerPath],
       env: {
-        WORKSPACES_ROOT: workspacesRoot
-      }
+        WORKSPACES_ROOT: workspacesRoot,
+      },
     };
 
     await fs.writeFile(claudeConfigPath, JSON.stringify(claudeConfig, null, 2));
@@ -127,7 +157,7 @@ export const handleInstall = async (options: InstallOptions): Promise<void> => {
     console.log('2. Look for "🌍 Global Instructions" in resources');
     console.log('3. Click to load your global context');
     console.log('4. Edit global instructions in your workspaces directory');
-    
+
     console.log(chalk.blue(`\n📁 Workspaces directory: ${workspacesRoot}`));
     console.log(chalk.blue(`📝 Claude config: ${claudeConfigPath}`));
 
