@@ -95,6 +95,9 @@ jobs:
     name: Build and Package DXT
     runs-on: ubuntu-latest
     needs: [test]
+    permissions:
+      contents: read
+      actions: write
 
     steps:
       - name: Checkout
@@ -132,33 +135,3 @@ jobs:
           name: workspaces-mcp-dxt-${{ github.sha }}
           path: '*.dxt'
           retention-days: 30
-
-      - name: Create Beta Release (on main)
-        if: github.ref == 'refs/heads/main'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: beta-${{ github.sha }}
-          release_name: Beta Release ${{ github.sha }}
-          body: |
-            Beta release of Workspaces MCP Server
-
-            Built from commit: ${{ github.sha }}
-
-            ## Installation
-            Download the `.dxt` file and install via Claude Desktop extension manager.
-          draft: false
-          prerelease: true
-
-      - name: Upload DXT to Beta Release
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./workspaces_mcp.dxt
-          asset_name: workspaces-mcp-${{ github.sha }}.dxt
-          asset_content_type: application/octet-stream
