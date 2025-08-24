@@ -4,6 +4,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Disable file watching to prevent EMFILE issues
+    watch: false,
+    // Reduce parallelism to avoid too many open files
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -26,6 +35,9 @@ export default defineConfig({
           statements: 90,
         },
       },
+      // Reduce the number of files opened simultaneously
+      reportsDirectory: './coverage',
+      clean: true,
     },
     include: ['packages/*/src/tests/**/*.test.ts', '**/src/tests/**/*.test.ts'],
     exclude: [
@@ -37,21 +49,22 @@ export default defineConfig({
       '**/index.test.ts',
       '**/mcp-protocol.test.ts',
     ],
-    poolOptions: {
-      threads: {
-        singleThread: false,
-      },
-    },
     testTimeout: 10000,
     hookTimeout: 10000,
     teardownTimeout: 5000,
     isolate: true,
     passWithNoTests: true,
-    logHeapUsage: true,
+    logHeapUsage: false, // Reduce logging overhead
     allowOnly: process.env.CI !== 'true',
-    reporters: process.env.CI ? ['verbose', 'github-actions'] : ['verbose'],
+    reporters: process.env.CI ? ['verbose', 'github-actions'] : ['default'],
     outputFile: {
       junit: './coverage/junit.xml',
+    },
+    // Reduce file system operations
+    server: {
+      deps: {
+        external: ['**/node_modules/**'],
+      },
     },
   },
 });

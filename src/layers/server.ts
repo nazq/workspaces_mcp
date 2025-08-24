@@ -14,6 +14,7 @@ import {
   getGlobalInstructionsPath,
   getSharedInstructionsPath,
 } from '../config/paths.js';
+import { ToolRegistry } from '../tools/registry.js';
 import { createChildLogger } from '../utils/logger.js';
 
 import { ControllerFactory } from './controllers/index.js';
@@ -75,10 +76,8 @@ export class WorkspacesMcpServer {
       instructionsRepository,
     });
 
-    const toolService = new ToolService({
-      workspaceRepository,
-      instructionsRepository,
-    });
+    const toolRegistry = new ToolRegistry();
+    const toolService = new ToolService(toolRegistry, logger);
 
     // Layer 3: Controllers Layer (for future protocol processor integration)
     const controllers = ControllerFactory.createAll({
@@ -249,8 +248,41 @@ export class WorkspacesMcpServer {
 }
 
 // Factory function for easier creation
+/**
+ * Factory function for creating MCP server instances
+ *
+ * Provides a clean, functional API for server creation with
+ * sensible defaults and comprehensive error handling.
+ *
+ * @param config - Optional server configuration
+ * @returns Configured MCP server instance
+ *
+ * @example
+ * ```typescript
+ * // Create with defaults
+ * const server = createWorkspacesMcpServer();
+ *
+ * // Create with custom config
+ * const server = createWorkspacesMcpServer({
+ *   workspacesRoot: '/custom/path',
+ *   config: {
+ *     logging: { level: 'debug' },
+ *     features: { enableTemplates: true }
+ *   }
+ * });
+ *
+ * await server.start();
+ * ```
+ */
 export function createWorkspacesMcpServer(
   config: ServerConfig = {}
 ): WorkspacesMcpServer {
-  return new WorkspacesMcpServer(config);
+  try {
+    return new WorkspacesMcpServer(config);
+  } catch (error) {
+    logger.error('Failed to create MCP server', error);
+    throw new Error(
+      `Server creation failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }

@@ -36,13 +36,13 @@ describe('MCP Protocol Integration Tests', () => {
 
       const dataHandler = (data: Buffer) => {
         responseData += data.toString();
-        
+
         // Split by newlines to handle multiple JSON responses
         const lines = responseData.split('\n');
-        
+
         for (const line of lines) {
           if (!line.trim()) continue;
-          
+
           try {
             const response = JSON.parse(line.trim());
             if (response.id === request.id) {
@@ -96,12 +96,12 @@ describe('MCP Protocol Integration Tests', () => {
         capabilities: {},
         clientInfo: {
           name: 'integration-test',
-          version: '1.0.0'
-        }
+          version: '1.0.0',
+        },
       },
-      id: 0
+      id: 0,
     };
-    
+
     try {
       await sendMCPRequest(initRequest);
     } catch (error) {
@@ -228,7 +228,7 @@ describe('MCP Protocol Integration Tests', () => {
       expect(response.error).toBeUndefined();
       expect(response.result).toBeDefined();
       expect(response.result.content[0]?.text).toContain(
-        'Workspace \'test-integration-workspace\' created successfully'
+        "Workspace 'test-integration-workspace' created successfully"
       );
 
       // Verify workspace was actually created on filesystem
@@ -323,7 +323,7 @@ describe('MCP Protocol Integration Tests', () => {
 
       expect(response.error).toBeUndefined();
       expect(response.result?.content[0]?.text).toContain(
-        'Shared instruction \'integration-test-template\' created successfully'
+        "Shared instruction 'integration-test-template' created successfully"
       );
 
       // Verify file was created

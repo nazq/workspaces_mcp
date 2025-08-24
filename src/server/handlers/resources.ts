@@ -6,8 +6,12 @@ import type {
 
 import { MCP_RESOURCE_SCHEMES } from '../../config/constants.js';
 import { getDefaultWorkspacesRoot } from '../../config/paths.js';
+import { AsyncEventBus } from '../../events/event-bus.js';
+import type { EventBus, FileSystemService, Logger } from '../../interfaces/services.js';
+import { FileSystemService as NodeFileSystemService } from '../../services/filesystem.js';
 import { InstructionsService } from '../../services/instructions.js';
 import { WorkspaceService } from '../../services/workspace.js';
+import { createChildLogger } from '../../utils/logger.js';
 
 export class ResourceHandler {
   private instructionsService: InstructionsService;
@@ -15,8 +19,14 @@ export class ResourceHandler {
 
   constructor(workspacesRoot?: string) {
     const root = workspacesRoot ?? getDefaultWorkspacesRoot();
+    
+    // Create required dependencies
+    const fs: FileSystemService = new NodeFileSystemService();
+    const eventBus: EventBus = new AsyncEventBus();
+    const logger: Logger = createChildLogger('ResourceHandler');
+    
     this.instructionsService = new InstructionsService(root);
-    this.workspaceService = new WorkspaceService(root);
+    this.workspaceService = new WorkspaceService(root, fs, eventBus, logger);
   }
 
   async listResources(): Promise<ListResourcesResult> {

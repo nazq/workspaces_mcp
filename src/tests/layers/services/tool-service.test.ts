@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Logger } from '../../../interfaces/services.js';
 import type {
   InstructionsRepository,
   WorkspaceRepository,
 } from '../../../layers/data/index.js';
 import { ToolService } from '../../../layers/services/tool-service.js';
+import { ToolRegistry } from '../../../tools/registry.js';
 import type {
   SharedInstruction,
   WorkspaceMetadata,
@@ -55,10 +57,18 @@ describe('ToolService', () => {
       updateGlobal: vi.fn(),
     } as any;
 
-    toolService = new ToolService({
-      workspaceRepository: mockWorkspaceRepository,
-      instructionsRepository: mockInstructionsRepository,
-    });
+    // Create mock logger
+    const mockLogger: Logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      fatal: vi.fn(),
+    };
+
+    // Create tool registry and service
+    const toolRegistry = new ToolRegistry();
+    toolService = new ToolService(toolRegistry, mockLogger);
   });
 
   afterEach(() => {

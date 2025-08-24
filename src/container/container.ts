@@ -14,7 +14,7 @@ export interface Container {
 
 export class DIContainer implements Container {
   private services = new Map<ServiceToken, ServiceFactory>();
-  private singletons = new Map<ServiceToken, any>();
+  private singletons = new Map<ServiceToken, unknown>();
   private singletonFactories = new Set<ServiceToken>();
 
   register<T>(token: ServiceToken, factory: ServiceFactory<T>): void {
@@ -24,6 +24,10 @@ export class DIContainer implements Container {
   registerSingleton<T>(token: ServiceToken, factory: ServiceFactory<T>): void {
     this.services.set(token, factory);
     this.singletonFactories.add(token);
+    // Clear cached singleton when re-registering
+    if (this.singletons.has(token)) {
+      this.singletons.delete(token);
+    }
   }
 
   get<T>(token: ServiceToken): T {

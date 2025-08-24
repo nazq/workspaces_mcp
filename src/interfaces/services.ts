@@ -177,20 +177,20 @@ export interface FileSystemService {
 
 // Event System Interfaces
 export interface EventBus {
-  emit<T = any>(event: string, data: T): Promise<void>;
-  on<T = any>(event: string, handler: EventHandler<T>): () => void;
-  once<T = any>(event: string, handler: EventHandler<T>): void;
+  emit<T = unknown>(event: string, data: T): Promise<void>;
+  on<T = unknown>(event: string, handler: EventHandler<T>): () => void;
+  once<T = unknown>(event: string, handler: EventHandler<T>): void;
   off(event: string, handler?: EventHandler): void;
   removeAllListeners(event?: string): void;
 }
 
-export type EventHandler<T = any> = (data: T) => void | Promise<void>;
+export type EventHandler<T = unknown> = (data: T) => void | Promise<void>;
 
 // Tool System Interfaces
-export interface ToolHandler<TArgs = any, TResult = CallToolResult> {
+export interface ToolHandler<TArgs = unknown, TResult = CallToolResult> {
   readonly name: string;
   readonly description: string;
-  readonly inputSchema: any; // Zod schema
+  readonly inputSchema: unknown; // Zod schema - typed as unknown to avoid import dependencies
 
   execute(args: TArgs, context: ToolContext): Promise<Result<TResult>>;
 }
@@ -198,21 +198,68 @@ export interface ToolHandler<TArgs = any, TResult = CallToolResult> {
 export interface ToolContext {
   workspaceRepository: WorkspaceRepository;
   instructionsRepository: InstructionsRepository;
-  config: any; // AppConfig
+  config: AppConfig;
   logger: Logger;
   eventBus: EventBus;
 }
 
+// Re-export AppConfig type for ToolContext
+export type AppConfig = {
+  workspaces: {
+    rootPath: string;
+    maxWorkspaces: number;
+    allowedTemplates: string[];
+  };
+  server: {
+    transport: {
+      type: string;
+      stdio?: Record<string, unknown>;
+      http?: {
+        host: string;
+        port: number;
+      };
+    };
+    timeout: number;
+  };
+  logging: {
+    level: string;
+    format: string;
+    destination: string;
+  };
+  features: {
+    enableTemplates: boolean;
+    enableSharedInstructions: boolean;
+    enableFileWatching: boolean;
+  };
+  development: {
+    enableDebugMode: boolean;
+    mockServices: boolean;
+  };
+  security: {
+    maxFileSize: number;
+    allowedFileTypes: string[];
+    sanitizeContent: boolean;
+  };
+  performance: {
+    cacheEnabled: boolean;
+    cacheTTL: number;
+    maxConcurrentRequests: number;
+  };
+};
+
 export interface ToolRegistry {
   register(handler: ToolHandler): void;
   unregister(name: string): void;
-  listTools(): any[]; // Tool[]
+  listTools(): unknown[]; // MCP Tool[] - typed as unknown to avoid import dependencies
   execute(
     name: string,
     args: unknown,
     context: ToolContext
   ): Promise<Result<CallToolResult>>;
   hasHandler(name: string): boolean;
+  getHandlerNames(): string[];
+  getHandler(name: string): ToolHandler | undefined;
+  clear(): void;
 }
 
 // Logging Interface
@@ -228,20 +275,26 @@ export interface Logger {
 export interface Transport {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
-  send(message: any): Promise<void>;
+  send(message: Record<string, unknown>): Promise<void>;
   isConnected(): boolean;
 }
 
 export interface ProtocolProcessor {
-  processRequest(request: any): Promise<any>;
-  registerHandler(method: string, handler: any): void;
+  processRequest(
+    request: Record<string, unknown>
+  ): Promise<Record<string, unknown>>;
+  registerHandler(method: string, handler: RequestHandler): void;
   unregisterHandler(method: string): void;
 }
+
+export type RequestHandler = (
+  request: Record<string, unknown>
+) => Promise<Record<string, unknown>>;
 
 // Controller Interfaces
 export interface Controller {
   readonly method: string;
-  handle(request: any): Promise<any>;
+  handle(request: Record<string, unknown>): Promise<Record<string, unknown>>;
 }
 
 export interface ControllerFactory {

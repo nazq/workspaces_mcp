@@ -6,10 +6,13 @@ import * as path from 'node:path';
 
 import { z } from 'zod';
 
-// Configuration Schema with full validation
+// Configuration Schema with full validation and defaults
 const AppConfigSchema = z.object({
   workspaces: z.object({
-    rootPath: z.string().min(1, 'Workspaces root path cannot be empty'),
+    rootPath: z
+      .string()
+      .min(1, 'Workspaces root path cannot be empty')
+      .default(path.join(os.homedir(), 'Documents', 'workspaces')),
     maxWorkspaces: z.number().positive().default(100),
     allowedTemplates: z
       .array(z.string())
@@ -80,56 +83,94 @@ const AppConfigSchema = z.object({
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 
-// Default configuration factory
-export const createDefaultConfig = (): Partial<AppConfig> => ({
-  workspaces: {
-    rootPath:
-      process.env.WORKSPACES_ROOT ||
-      path.join(os.homedir(), 'Documents', 'workspaces'),
-    maxWorkspaces: Number(process.env.MAX_WORKSPACES) || 100,
-    allowedTemplates: ['react-typescript', 'python-data', 'node-api'],
-    enableTemplateValidation: true,
-  },
-  server: {
-    name: 'Workspaces MCP',
-    version: '2.0.0',
-    transport: (process.env.MCP_TRANSPORT as 'stdio' | 'http') || 'stdio',
-    httpPort: process.env.HTTP_PORT ? Number(process.env.HTTP_PORT) : undefined,
-    httpHost: process.env.HTTP_HOST || 'localhost',
-    cors: true,
-    shutdownTimeoutMs: 5000,
-  },
-  logging: {
-    level:
-      (process.env.WORKSPACES_LOG_LEVEL as
+// Environment-aware configuration factory
+export const createEnvironmentConfig = (): Partial<AppConfig> => {
+  const config: Partial<AppConfig> = {};
+
+  // Only set environment variables and computed defaults - let schema handle the rest
+  if (process.env.WORKSPACES_ROOT || process.env.MAX_WORKSPACES) {
+    config.workspaces = {
+      rootPath:
+        process.env.WORKSPACES_ROOT ||
+        path.join(os.homedir(), 'Documents', 'workspaces'),
+      ...(process.env.MAX_WORKSPACES && {
+        maxWorkspaces: Number(process.env.MAX_WORKSPACES) || 100,
+      }),
+    };
+  } else {
+    // Always set computed default for workspaces root
+    config.workspaces = {
+      rootPath: path.join(os.homedir(), 'Documents', 'workspaces'),
+    };
+  }
+
+  if (
+    process.env.MCP_TRANSPORT ||
+    process.env.HTTP_PORT ||
+    process.env.HTTP_HOST
+  ) {
+    config.server = {
+      ...(process.env.MCP_TRANSPORT && {
+        transport: process.env.MCP_TRANSPORT as 'stdio' | 'http',
+      }),
+      ...(process.env.HTTP_PORT && {
+        httpPort: Number(process.env.HTTP_PORT),
+      }),
+      ...(process.env.HTTP_HOST && {
+        httpHost: process.env.HTTP_HOST,
+      }),
+    };
+  }
+
+  if (process.env.WORKSPACES_LOG_LEVEL) {
+    config.logging = {
+      level: process.env.WORKSPACES_LOG_LEVEL as
         | 'debug'
         | 'info'
         | 'warn'
         | 'error'
-        | 'fatal') || 'info',
-    format: 'pretty' as const,
-    enableColors: true,
-    enableTimestamp: true,
-    maxLogSize: 10 * 1024 * 1024,
-  },
-  development: {
-    enableDebugMode: process.env.NODE_ENV === 'development',
-    enableHotReload: false,
-    enableVerboseLogging: process.env.VERBOSE === 'true',
-    mockFileSystem: process.env.MOCK_FS === 'true',
-  },
-});
+        | 'fatal',
+    };
+  }
 
-// Configuration loader with validation
+  if (process.env.NODE_ENV || process.env.VERBOSE || process.env.MOCK_FS) {
+    config.development = {
+      ...(process.env.NODE_ENV && {
+        enableDebugMode: process.env.NODE_ENV === 'development',
+      }),
+      ...(process.env.VERBOSE && {
+        enableVerboseLogging: process.env.VERBOSE === 'true',
+      }),
+      ...(process.env.MOCK_FS && {
+        mockFileSystem: process.env.MOCK_FS === 'true',
+      }),
+    };
+  }
+
+  return config;
+};
+
+// Simplified configuration loader - let Zod do the heavy lifting
 export const loadConfig = (overrides: Partial<AppConfig> = {}): AppConfig => {
-  const defaultConfig = createDefaultConfig();
-  const mergedConfig = {
-    ...defaultConfig,
+  const environmentConfig = createEnvironmentConfig();
+
+  // Ensure all sections exist so Zod can apply defaults
+  const inputConfig = {
+    workspaces: {},
+    server: {},
+    logging: {},
+    features: {},
+    development: {},
+    security: {},
+    performance: {},
+    // Apply environment config and overrides
+    ...environmentConfig,
     ...overrides,
   };
 
   try {
-    return AppConfigSchema.parse(mergedConfig);
+    // Zod handles all defaults and validation
+    return AppConfigSchema.parse(inputConfig);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map(
@@ -140,6 +181,9 @@ export const loadConfig = (overrides: Partial<AppConfig> = {}): AppConfig => {
     throw error;
   }
 };
+
+// Backward compatibility - keep the old name
+export const createDefaultConfig = createEnvironmentConfig;
 
 // Configuration service interface
 export interface ConfigurationService {
@@ -160,7 +204,7 @@ export class AppConfigurationService implements ConfigurationService {
   }
 
   getConfig(): AppConfig {
-    return { ...this.config }; // Return a copy to prevent mutation
+    return JSON.parse(JSON.stringify(this.config)); // Deep copy to prevent mutation
   }
 
   get<K extends keyof AppConfig>(key: K): AppConfig[K] {

@@ -147,7 +147,7 @@ export class ToolRegistry implements IToolRegistry {
     toolName: string,
     args: unknown,
     executionTimeMs: number,
-    result?: any,
+    result?: unknown,
     error?: Error
   ): Promise<void> {
     try {
@@ -173,13 +173,13 @@ export class ToolRegistry implements IToolRegistry {
   }
 
   // Convert Zod schema to JSON Schema for MCP
-  private zodToJsonSchema(zodSchema: z.ZodSchema): any {
+  private zodToJsonSchema(zodSchema: z.ZodSchema): Record<string, unknown> {
     // Basic conversion - in a real implementation, you'd use a library like zod-to-json-schema
     // For now, we'll use a simplified approach
 
     if (zodSchema instanceof z.ZodObject) {
       const shape = zodSchema.shape;
-      const properties: any = {};
+      const properties: Record<string, unknown> = {};
       const required: string[] = [];
 
       for (const [key, value] of Object.entries(shape)) {

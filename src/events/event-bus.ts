@@ -1,13 +1,17 @@
 // Professional Event Bus - Async, Type-Safe, Performant
 // Enables decoupled architecture with reliable event handling
 
-import type { EventBus, EventHandler } from '../interfaces/services.js';
+import type { EventBus, EventHandler, Logger } from '../interfaces/services.js';
 import { createChildLogger } from '../utils/logger.js';
 
 export class AsyncEventBus implements EventBus {
   private handlers = new Map<string, EventHandler[]>();
-  private logger = createChildLogger('event-bus');
+  private logger: Logger;
   private maxListeners = 100; // Prevent memory leaks
+
+  constructor(logger?: Logger) {
+    this.logger = logger ?? createChildLogger('event-bus');
+  }
 
   async emit<T>(event: string, data: T): Promise<void> {
     const eventHandlers = this.handlers.get(event) || [];
@@ -39,7 +43,7 @@ export class AsyncEventBus implements EventBus {
       this.handlers.set(event, []);
     }
 
-    const handlers = this.handlers.get(event)!;
+    const handlers = this.handlers.get(event) as EventHandler[];
 
     // Prevent memory leaks
     if (handlers.length >= this.maxListeners) {
@@ -134,8 +138,31 @@ export class AsyncEventBus implements EventBus {
   }
 
   // Batch operations for performance
-  async emitBatch(events: Array<{ event: string; data: any }>): Promise<void> {
+  async emitBatch(
+    events: Array<{ event: string; data: unknown }>
+  ): Promise<void> {
     const promises = events.map(({ event, data }) => this.emit(event, data));
     await Promise.allSettled(promises);
+  }
+
+  // Statistics and monitoring
+  getEventStats(): {
+    totalEvents: number;
+    totalHandlers: number;
+    events: Record<string, number>;
+  } {
+    const events: Record<string, number> = {};
+    let totalHandlers = 0;
+
+    for (const [event, handlers] of this.handlers.entries()) {
+      events[event] = handlers.length;
+      totalHandlers += handlers.length;
+    }
+
+    return {
+      totalEvents: this.handlers.size,
+      totalHandlers,
+      events,
+    };
   }
 }

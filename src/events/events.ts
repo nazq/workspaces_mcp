@@ -170,7 +170,7 @@ export interface ToolExecutedEvent {
   success: boolean;
   executionTimeMs: number;
   timestamp: Date;
-  result?: any;
+  result?: unknown;
   error?: Error;
 }
 
@@ -218,18 +218,18 @@ export interface ResourceErrorEvent {
 export interface ConfigLoadedEvent {
   timestamp: Date;
   configPath?: string;
-  overrides: Record<string, any>;
+  overrides: Record<string, unknown>;
 }
 
 export interface ConfigUpdatedEvent {
   timestamp: Date;
-  changes: Record<string, any>;
+  changes: Record<string, unknown>;
 }
 
 export interface ConfigValidationFailedEvent {
   timestamp: Date;
   errors: string[];
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface FileCreatedEvent {

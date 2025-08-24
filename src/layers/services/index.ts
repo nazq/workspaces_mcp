@@ -1,7 +1,4 @@
-// Services Layer Exports
+// Modern Services Layer Exports - Clean Architecture
 export * from './interfaces.js';
-export {
-  ResourceService,
-  type ResourceServiceDependencies,
-} from './resource-service.js';
-export { ToolService, type ToolServiceDependencies } from './tool-service.js';
+export { ResourceService } from './resource-service.js';
+export { ToolService } from './tool-service.js';

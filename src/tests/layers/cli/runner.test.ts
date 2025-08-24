@@ -3,11 +3,13 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Logger } from '../../../interfaces/services.js';
 import { CliRunner, type CliRunnerConfig } from '../../../layers/cli/runner.js';
 import { NodeFileSystemProvider } from '../../../layers/data/filesystem/node-provider.js';
 import { FileSystemInstructionsRepository } from '../../../layers/data/repositories/instructions-repository.js';
 import { FileSystemWorkspaceRepository } from '../../../layers/data/repositories/workspace-repository.js';
 import { ToolService } from '../../../layers/services/tool-service.js';
+import { ToolRegistry } from '../../../tools/registry.js';
 
 describe('CliRunner', () => {
   let runner: CliRunner;
@@ -33,10 +35,19 @@ describe('CliRunner', () => {
       path.join(tempDir, 'SHARED_INSTRUCTIONS', 'GLOBAL.md')
     );
 
-    toolService = new ToolService({
-      workspaceRepository,
-      instructionsRepository,
-    });
+    // Create mock logger
+    const mockLogger: Logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      fatal: vi.fn(),
+    };
+
+    // Create tool registry
+    const toolRegistry = new ToolRegistry();
+
+    toolService = new ToolService(toolRegistry, mockLogger);
 
     const config: CliRunnerConfig = {
       workspacesRoot: tempDir,
