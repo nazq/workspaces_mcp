@@ -19,6 +19,7 @@
   },
   "scripts": {
     "build": "tsx scripts/build.ts",
+    "ci": "npm run typecheck && npm run lint && npx vitest run && npm run build",
     "dxt:build": "tsx scripts/build-dxt.ts",
     "dxt:package": "npm run build && npm run dxt:build",
     "dev": "tsx scripts/dev.ts",
