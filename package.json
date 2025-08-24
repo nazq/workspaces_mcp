@@ -10,7 +10,8 @@
     }
   },
   "bin": {
-    "workspaces-mcp-server": "./dist/bin/server.js"
+    "workspaces-mcp-server": "./dist/bin/server.js",
+    "workspaces-cli": "./dist/bin/cli.js"
   },
   "engines": {
     "node": ">=18.0.0",
@@ -38,6 +39,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.3",
+    "chalk": "^5.3.0",
     "chokidar": "^4.0.1",
     "fs-extra": "^11.2.0",
     "tslog": "^4.9.3",

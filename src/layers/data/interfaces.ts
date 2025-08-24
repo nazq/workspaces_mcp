@@ -55,6 +55,7 @@ export interface InstructionsRepository {
 export interface WorkspaceCreateOptions {
   description?: string;
   template?: string;
+  initializeInstructions?: boolean;
 }
 
 export interface WorkspaceMetadata {
@@ -63,6 +64,7 @@ export interface WorkspaceMetadata {
   createdAt: Date;
   modifiedAt: Date;
   path: string;
+  hasInstructions: boolean;
 }
 
 export interface SharedInstructionMetadata {

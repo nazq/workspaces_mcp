@@ -1,9 +1,8 @@
 import { spawn } from 'node:child_process';
-import { homedir } from 'node:os';
 import path from 'node:path';
 
 import fs from 'fs-extra';
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 describe('CLI Install Integration Tests', () => {
   let tempDir: string;
@@ -12,24 +11,29 @@ describe('CLI Install Integration Tests', () => {
   beforeEach(async () => {
     // Create temporary directory for test workspace
     tempDir = await fs.mkdtemp(path.join(process.cwd(), 'cli-test-'));
-    
+
     // Get CLI path
     cliPath = path.resolve('packages/dxt-workspaces/dist/index.js');
-    
+
     // Ensure CLI is built
     if (!(await fs.pathExists(cliPath))) {
-      throw new Error(`CLI not built at ${cliPath}. Run 'npm run build' first.`);
+      throw new Error(
+        `CLI not built at ${cliPath}. Run 'npm run build' first.`
+      );
     }
   });
 
   afterEach(async () => {
     // Clean up temp directory
-    if (tempDir && await fs.pathExists(tempDir)) {
+    if (tempDir && (await fs.pathExists(tempDir))) {
       await fs.remove(tempDir);
     }
   });
 
-  const runCLI = (args: string[], options?: { input?: string }): Promise<{
+  const runCLI = (
+    args: string[],
+    options?: { input?: string }
+  ): Promise<{
     stdout: string;
     stderr: string;
     code: number | null;
@@ -70,9 +74,13 @@ describe('CLI Install Integration Tests', () => {
       const result = await runCLI(['--help']);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('Workspaces MCP Developer Experience Toolkit');
+      expect(result.stdout).toContain(
+        'Workspaces MCP Developer Experience Toolkit'
+      );
       expect(result.stdout).toContain('install [options]');
-      expect(result.stdout).toContain('Install and setup Workspaces MCP for Claude Desktop');
+      expect(result.stdout).toContain(
+        'Install and setup Workspaces MCP for Claude Desktop'
+      );
     });
 
     it('should show version when --version flag is used', async () => {
@@ -86,7 +94,9 @@ describe('CLI Install Integration Tests', () => {
       const result = await runCLI(['install', '--help']);
 
       expect(result.code).toBe(0);
-      expect(result.stdout).toContain('Install and setup Workspaces MCP for Claude Desktop');
+      expect(result.stdout).toContain(
+        'Install and setup Workspaces MCP for Claude Desktop'
+      );
       expect(result.stdout).toContain('--path <path>');
       expect(result.stdout).toContain('Custom workspaces directory path');
     });
@@ -118,20 +128,26 @@ describe('CLI Install Integration Tests', () => {
 
       const globalContent = await fs.readFile(globalFile, 'utf8');
       expect(globalContent).toContain('# Global Instructions');
-      expect(globalContent).toContain('automatically loaded in every Claude session');
+      expect(globalContent).toContain(
+        'automatically loaded in every Claude session'
+      );
     });
 
     it('should not overwrite existing global instructions', async () => {
       // Pre-create GLOBAL.md with custom content
       const sharedDir = path.join(tempDir, 'SHARED_INSTRUCTIONS');
       await fs.ensureDir(sharedDir);
-      const customContent = '# My Custom Global Instructions\n\nCustom content here.';
+      const customContent =
+        '# My Custom Global Instructions\n\nCustom content here.';
       await fs.writeFile(path.join(sharedDir, 'GLOBAL.md'), customContent);
 
       await runCLI(['install', '--path', tempDir]);
 
       // Should preserve existing content
-      const globalContent = await fs.readFile(path.join(sharedDir, 'GLOBAL.md'), 'utf8');
+      const globalContent = await fs.readFile(
+        path.join(sharedDir, 'GLOBAL.md'),
+        'utf8'
+      );
       expect(globalContent).toBe(customContent);
     });
 
@@ -147,7 +163,7 @@ describe('CLI Install Integration Tests', () => {
       // Move MCP server temporarily to simulate missing server
       const mcpServerPath = path.resolve('packages/mcp-server/dist/index.js');
       const backupPath = mcpServerPath + '.backup';
-      
+
       if (await fs.pathExists(mcpServerPath)) {
         await fs.move(mcpServerPath, backupPath);
       }
@@ -187,7 +203,7 @@ describe('CLI Install Integration Tests', () => {
 
     it('should handle Linux configuration path', async () => {
       mockPlatform('linux');
-      
+
       // Mock HOME directory for test
       const mockHome = tempDir;
       const originalHome = process.env.HOME;
@@ -198,7 +214,11 @@ describe('CLI Install Integration Tests', () => {
         const configDir = path.join(mockHome, '.config', 'Claude');
         await fs.ensureDir(configDir);
 
-        const result = await runCLI(['install', '--path', path.join(tempDir, 'workspaces')]);
+        const result = await runCLI([
+          'install',
+          '--path',
+          path.join(tempDir, 'workspaces'),
+        ]);
 
         expect(result.code).toBe(0);
 
@@ -227,7 +247,10 @@ describe('CLI Install Integration Tests', () => {
     it('should generate valid Claude Desktop configuration', async () => {
       // Use a mock config directory we can control
       const mockConfigDir = path.join(tempDir, 'mock-config');
-      const mockConfigFile = path.join(mockConfigDir, 'claude_desktop_config.json');
+      const mockConfigFile = path.join(
+        mockConfigDir,
+        'claude_desktop_config.json'
+      );
       await fs.ensureDir(mockConfigDir);
 
       // Mock the getClaudeConfigPath function by using environment variable
@@ -240,12 +263,19 @@ describe('CLI Install Integration Tests', () => {
       // For this test, we'll check the workspace structure since we can't easily mock the config path
       // In a real scenario, the config would be written to the actual Claude config location
       expect(await fs.pathExists(tempDir)).toBe(true);
-      expect(await fs.pathExists(path.join(tempDir, 'SHARED_INSTRUCTIONS', 'GLOBAL.md'))).toBe(true);
+      expect(
+        await fs.pathExists(
+          path.join(tempDir, 'SHARED_INSTRUCTIONS', 'GLOBAL.md')
+        )
+      ).toBe(true);
     });
 
     it('should preserve existing Claude configuration', async () => {
       const mockConfigDir = path.join(tempDir, 'mock-config');
-      const mockConfigFile = path.join(mockConfigDir, 'claude_desktop_config.json');
+      const mockConfigFile = path.join(
+        mockConfigDir,
+        'claude_desktop_config.json'
+      );
       await fs.ensureDir(mockConfigDir);
 
       // Pre-create existing config
@@ -310,7 +340,11 @@ describe('CLI Install Integration Tests', () => {
     });
 
     it('should provide helpful error messages', async () => {
-      const result = await runCLI(['install', '--path', '/invalid/path/that/cannot/exist']);
+      const result = await runCLI([
+        'install',
+        '--path',
+        '/invalid/path/that/cannot/exist',
+      ]);
 
       expect(result.code).toBe(1);
       expect(result.stderr).toContain('Installation failed');

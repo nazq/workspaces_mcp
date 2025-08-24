@@ -1,4 +1,5 @@
 // Services Layer Exports
+export * from './interfaces.js';
 export {
   ResourceService,
   type ResourceServiceDependencies,

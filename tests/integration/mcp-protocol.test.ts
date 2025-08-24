@@ -1,10 +1,8 @@
-import { spawn, ChildProcess } from 'node:child_process';
+import { ChildProcess, spawn } from 'node:child_process';
 import path from 'node:path';
 
 import fs from 'fs-extra';
-import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-
-import { getDefaultWorkspacesRoot } from '../../packages/mcp-server/src/config/paths.js';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 interface MCPRequest {
   jsonrpc: '2.0';
@@ -38,7 +36,7 @@ describe('MCP Protocol Integration Tests', () => {
 
       const dataHandler = (data: Buffer) => {
         responseData += data.toString();
-        
+
         // Check if we have a complete JSON response
         try {
           const response = JSON.parse(responseData.trim());
@@ -62,7 +60,7 @@ describe('MCP Protocol Integration Tests', () => {
   beforeAll(async () => {
     // Create temporary workspace directory
     tempDir = await fs.mkdtemp(path.join(process.cwd(), 'integration-test-'));
-    
+
     // Start MCP server
     const serverPath = path.resolve('packages/mcp-server/dist/index.js');
     mcpServer = spawn('node', [serverPath], {
@@ -89,7 +87,7 @@ describe('MCP Protocol Integration Tests', () => {
     }
 
     // Clean up temp directory
-    if (tempDir && await fs.pathExists(tempDir)) {
+    if (tempDir && (await fs.pathExists(tempDir))) {
       await fs.remove(tempDir);
     }
   });
@@ -136,7 +134,9 @@ describe('MCP Protocol Integration Tests', () => {
       expect(response.error).toBeUndefined();
       expect(response.result).toBeDefined();
       expect(response.result.contents).toBeInstanceOf(Array);
-      expect(response.result.contents[0]?.text).toContain('# Global Instructions');
+      expect(response.result.contents[0]?.text).toContain(
+        '# Global Instructions'
+      );
     });
 
     it('should handle invalid resource URI gracefully', async () => {
@@ -205,7 +205,9 @@ describe('MCP Protocol Integration Tests', () => {
       // Verify workspace was actually created on filesystem
       const workspacePath = path.join(tempDir, 'test-integration-workspace');
       expect(await fs.pathExists(workspacePath)).toBe(true);
-      expect(await fs.pathExists(path.join(workspacePath, 'README.md'))).toBe(true);
+      expect(await fs.pathExists(path.join(workspacePath, 'README.md'))).toBe(
+        true
+      );
     });
 
     it('should list workspaces after creation', async () => {
@@ -234,8 +236,12 @@ describe('MCP Protocol Integration Tests', () => {
       const response = await sendMCPRequest(request);
 
       expect(response.error).toBeUndefined();
-      expect(response.result?.content[0]?.text).toContain('Available Workspaces');
-      expect(response.result?.content[0]?.text).toContain('list-test-workspace');
+      expect(response.result?.content[0]?.text).toContain(
+        'Available Workspaces'
+      );
+      expect(response.result?.content[0]?.text).toContain(
+        'list-test-workspace'
+      );
     });
 
     it('should get workspace info', async () => {
@@ -264,7 +270,9 @@ describe('MCP Protocol Integration Tests', () => {
       const response = await sendMCPRequest(request);
 
       expect(response.error).toBeUndefined();
-      expect(response.result?.content[0]?.text).toContain('Workspace: info-test-workspace');
+      expect(response.result?.content[0]?.text).toContain(
+        'Workspace: info-test-workspace'
+      );
       expect(response.result?.content[0]?.text).toContain('README.md');
     });
 
@@ -291,9 +299,13 @@ describe('MCP Protocol Integration Tests', () => {
       );
 
       // Verify file was created
-      const templatePath = path.join(tempDir, 'SHARED_INSTRUCTIONS', 'integration-test-template.md');
+      const templatePath = path.join(
+        tempDir,
+        'SHARED_INSTRUCTIONS',
+        'integration-test-template.md'
+      );
       expect(await fs.pathExists(templatePath)).toBe(true);
-      
+
       const content = await fs.readFile(templatePath, 'utf8');
       expect(content).toContain('# Integration Test Template');
     });
@@ -377,7 +389,9 @@ describe('MCP Protocol Integration Tests', () => {
       });
 
       expect(readWorkspaceResponse.error).toBeUndefined();
-      const workspaceData = JSON.parse(readWorkspaceResponse.result.contents[0].text);
+      const workspaceData = JSON.parse(
+        readWorkspaceResponse.result.contents[0].text
+      );
       expect(workspaceData.name).toBe('e2e-workflow-test');
       expect(workspaceData.files).toContain('README.md');
 
@@ -392,7 +406,9 @@ describe('MCP Protocol Integration Tests', () => {
         id: requestId++,
       });
 
-      expect(listWorkspacesResponse.result.content[0].text).toContain('e2e-workflow-test');
+      expect(listWorkspacesResponse.result.content[0].text).toContain(
+        'e2e-workflow-test'
+      );
     });
 
     it('should handle shared instruction workflow', async () => {
@@ -436,7 +452,9 @@ describe('MCP Protocol Integration Tests', () => {
       });
 
       expect(readTemplateResponse.error).toBeUndefined();
-      expect(readTemplateResponse.result.contents[0].text).toContain('# E2E Template');
+      expect(readTemplateResponse.result.contents[0].text).toContain(
+        '# E2E Template'
+      );
 
       // 4. List shared instructions via tool
       const listInstructionsResponse = await sendMCPRequest({
@@ -449,7 +467,9 @@ describe('MCP Protocol Integration Tests', () => {
         id: requestId++,
       });
 
-      expect(listInstructionsResponse.result.content[0].text).toContain('e2e-template');
+      expect(listInstructionsResponse.result.content[0].text).toContain(
+        'e2e-template'
+      );
     });
   });
 });

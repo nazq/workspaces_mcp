@@ -118,6 +118,9 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
     try {
       const metadataPath = path.join(workspacePath, '.workspace.json');
 
+      const instructionsPath = path.join(workspacePath, 'INSTRUCTIONS.md');
+      const hasInstructions = await this.fs.exists(instructionsPath);
+
       if (await this.fs.exists(metadataPath)) {
         const content = await this.fs.readFile(metadataPath);
         const metadata = JSON.parse(content);
@@ -126,6 +129,7 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
           path: workspacePath,
           createdAt: new Date(metadata.createdAt),
           modifiedAt: new Date(metadata.modifiedAt),
+          hasInstructions,
         };
       } else {
         // Fallback for workspaces without metadata
@@ -135,6 +139,7 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
           path: workspacePath,
           createdAt: stats.createdTime,
           modifiedAt: stats.modifiedTime,
+          hasInstructions,
         };
       }
     } catch (error) {

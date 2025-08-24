@@ -1,9 +1,9 @@
 #!/usr/bin/env tsx
 
-import { spawn } from 'node:child_process';
-import fs from 'fs-extra';
-import path from 'node:path';
 import chalk from 'chalk';
+import fs from 'fs-extra';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -15,7 +15,11 @@ interface ValidationResult {
   error?: string;
 }
 
-const runCommand = (command: string, args: string[], options: { cwd?: string; timeout?: number } = {}): Promise<{
+const runCommand = (
+  command: string,
+  args: string[],
+  options: { cwd?: string; timeout?: number } = {}
+): Promise<{
   code: number;
   stdout: string;
   stderr: string;
@@ -56,17 +60,23 @@ const runCommand = (command: string, args: string[], options: { cwd?: string; ti
 
 async function validateBuilds(): Promise<ValidationResult> {
   console.log(chalk.blue('🔍 Validating builds...'));
-  
+
   try {
     // Check that all packages are built
-    const mcpServerPath = path.resolve(__dirname, '../packages/mcp-server/dist/index.js');
-    const dxtCliPath = path.resolve(__dirname, '../packages/dxt-workspaces/dist/index.js');
+    const mcpServerPath = path.resolve(
+      __dirname,
+      '../packages/mcp-server/dist/index.js'
+    );
+    const dxtCliPath = path.resolve(
+      __dirname,
+      '../packages/dxt-workspaces/dist/index.js'
+    );
 
     if (!(await fs.pathExists(mcpServerPath))) {
       return {
         name: 'Build Validation',
         passed: false,
-        error: 'MCP server build not found at ' + mcpServerPath
+        error: 'MCP server build not found at ' + mcpServerPath,
       };
     }
 
@@ -74,51 +84,56 @@ async function validateBuilds(): Promise<ValidationResult> {
       return {
         name: 'Build Validation',
         passed: false,
-        error: 'DXT CLI build not found at ' + dxtCliPath
+        error: 'DXT CLI build not found at ' + dxtCliPath,
       };
     }
 
     return {
       name: 'Build Validation',
       passed: true,
-      details: 'All packages built successfully'
+      details: 'All packages built successfully',
     };
   } catch (error) {
     return {
       name: 'Build Validation',
       passed: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
 
 async function validateMCPServer(): Promise<ValidationResult> {
   console.log(chalk.blue('🔍 Validating MCP server...'));
-  
+
   try {
     // Create temp workspace for testing
     const tempDir = await fs.mkdtemp(path.join(process.cwd(), 'validate-mcp-'));
-    
+
     try {
-      const result = await runCommand('node', [
-        path.resolve(__dirname, '../packages/mcp-server/dist/index.js')
-      ], {
-        cwd: tempDir,
-        timeout: 10000
-      });
+      const result = await runCommand(
+        'node',
+        [path.resolve(__dirname, '../packages/mcp-server/dist/index.js')],
+        {
+          cwd: tempDir,
+          timeout: 10000,
+        }
+      );
 
       // MCP server should start and respond to stdin
-      if (result.code === 0 || result.stdout.includes('MCP server initialized')) {
+      if (
+        result.code === 0 ||
+        result.stdout.includes('MCP server initialized')
+      ) {
         return {
           name: 'MCP Server Validation',
           passed: true,
-          details: 'MCP server starts and initializes correctly'
+          details: 'MCP server starts and initializes correctly',
         };
       } else {
         return {
           name: 'MCP Server Validation',
           passed: false,
-          error: `MCP server failed: ${result.stderr || result.stdout}`
+          error: `MCP server failed: ${result.stderr || result.stdout}`,
         };
       }
     } finally {
@@ -128,85 +143,93 @@ async function validateMCPServer(): Promise<ValidationResult> {
     return {
       name: 'MCP Server Validation',
       passed: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
 
 async function validateCLI(): Promise<ValidationResult> {
   console.log(chalk.blue('🔍 Validating CLI...'));
-  
+
   try {
     // Test CLI help command
     const helpResult = await runCommand('node', [
       path.resolve(__dirname, '../packages/dxt-workspaces/dist/index.js'),
-      '--help'
+      '--help',
     ]);
 
     if (helpResult.code !== 0) {
       return {
         name: 'CLI Validation',
         passed: false,
-        error: `CLI help command failed: ${helpResult.stderr}`
+        error: `CLI help command failed: ${helpResult.stderr}`,
       };
     }
 
-    if (!helpResult.stdout.includes('Workspaces MCP Developer Experience Toolkit')) {
+    if (
+      !helpResult.stdout.includes('Workspaces MCP Developer Experience Toolkit')
+    ) {
       return {
         name: 'CLI Validation',
         passed: false,
-        error: 'CLI help output does not contain expected text'
+        error: 'CLI help output does not contain expected text',
       };
     }
 
     // Test CLI version command
     const versionResult = await runCommand('node', [
       path.resolve(__dirname, '../packages/dxt-workspaces/dist/index.js'),
-      '--version'
+      '--version',
     ]);
 
     if (versionResult.code !== 0) {
       return {
         name: 'CLI Validation',
         passed: false,
-        error: `CLI version command failed: ${versionResult.stderr}`
+        error: `CLI version command failed: ${versionResult.stderr}`,
       };
     }
 
     return {
       name: 'CLI Validation',
       passed: true,
-      details: 'CLI help and version commands work correctly'
+      details: 'CLI help and version commands work correctly',
     };
   } catch (error) {
     return {
       name: 'CLI Validation',
       passed: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
 
 async function validateInstallation(): Promise<ValidationResult> {
   console.log(chalk.blue('🔍 Validating installation flow...'));
-  
+
   try {
     // Create temp directory for installation test
-    const tempDir = await fs.mkdtemp(path.join(process.cwd(), 'validate-install-'));
-    
+    const tempDir = await fs.mkdtemp(
+      path.join(process.cwd(), 'validate-install-')
+    );
+
     try {
-      const result = await runCommand('node', [
-        path.resolve(__dirname, '../packages/dxt-workspaces/dist/index.js'),
-        'install',
-        '--path',
-        tempDir
-      ], { timeout: 30000 });
+      const result = await runCommand(
+        'node',
+        [
+          path.resolve(__dirname, '../packages/dxt-workspaces/dist/index.js'),
+          'install',
+          '--path',
+          tempDir,
+        ],
+        { timeout: 30000 }
+      );
 
       if (result.code !== 0) {
         return {
           name: 'Installation Validation',
           passed: false,
-          error: `Installation failed: ${result.stderr || result.stdout}`
+          error: `Installation failed: ${result.stderr || result.stdout}`,
         };
       }
 
@@ -218,7 +241,7 @@ async function validateInstallation(): Promise<ValidationResult> {
         return {
           name: 'Installation Validation',
           passed: false,
-          error: 'SHARED_INSTRUCTIONS directory not created'
+          error: 'SHARED_INSTRUCTIONS directory not created',
         };
       }
 
@@ -226,7 +249,7 @@ async function validateInstallation(): Promise<ValidationResult> {
         return {
           name: 'Installation Validation',
           passed: false,
-          error: 'GLOBAL.md file not created'
+          error: 'GLOBAL.md file not created',
         };
       }
 
@@ -235,14 +258,14 @@ async function validateInstallation(): Promise<ValidationResult> {
         return {
           name: 'Installation Validation',
           passed: false,
-          error: 'GLOBAL.md content is incorrect'
+          error: 'GLOBAL.md content is incorrect',
         };
       }
 
       return {
         name: 'Installation Validation',
         passed: true,
-        details: 'Installation creates correct workspace structure'
+        details: 'Installation creates correct workspace structure',
       };
     } finally {
       await fs.remove(tempDir);
@@ -251,7 +274,7 @@ async function validateInstallation(): Promise<ValidationResult> {
     return {
       name: 'Installation Validation',
       passed: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
@@ -263,7 +286,7 @@ async function validateRelease() {
     validateBuilds,
     validateMCPServer,
     validateCLI,
-    validateInstallation
+    validateInstallation,
   ];
 
   const results: ValidationResult[] = [];
@@ -280,11 +303,11 @@ async function validateRelease() {
     const icon = result.passed ? '✅' : '❌';
     const status = result.passed ? chalk.green('PASSED') : chalk.red('FAILED');
     console.log(`${icon} ${status}: ${result.name}`);
-    
+
     if (result.details) {
       console.log(chalk.gray(`   ${result.details}`));
     }
-    
+
     if (!result.passed) {
       allPassed = false;
       if (result.error) {
@@ -293,16 +316,24 @@ async function validateRelease() {
     }
   });
 
-  console.log(`\n${allPassed ? '🎉' : '💥'} Overall: ${allPassed ? chalk.green('RELEASE READY') : chalk.red('VALIDATION FAILED')}`);
+  console.log(
+    `\n${allPassed ? '🎉' : '💥'} Overall: ${allPassed ? chalk.green('RELEASE READY') : chalk.red('VALIDATION FAILED')}`
+  );
 
   if (allPassed) {
-    console.log(chalk.green('\n✅ All validations passed! The release is ready for deployment.'));
+    console.log(
+      chalk.green(
+        '\n✅ All validations passed! The release is ready for deployment.'
+      )
+    );
     console.log(chalk.blue('\nTo create a release:'));
     console.log('  1. git tag v1.0.0');
     console.log('  2. git push origin v1.0.0');
     console.log('  3. GitHub Actions will build and publish automatically');
   } else {
-    console.log(chalk.red('\n❌ Please fix the validation errors before releasing.'));
+    console.log(
+      chalk.red('\n❌ Please fix the validation errors before releasing.')
+    );
     process.exit(1);
   }
 }

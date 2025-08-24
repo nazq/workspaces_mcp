@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { spawn } from 'node:child_process';
 import chalk from 'chalk';
+import { spawn } from 'node:child_process';
 
 interface TestResult {
   name: string;
@@ -10,10 +10,14 @@ interface TestResult {
   error?: string;
 }
 
-const runCommand = (command: string, args: string[], cwd = process.cwd()): Promise<TestResult> => {
+const runCommand = (
+  command: string,
+  args: string[],
+  cwd = process.cwd()
+): Promise<TestResult> => {
   return new Promise((resolve) => {
     console.log(chalk.blue(`\n📋 Running: ${command} ${args.join(' ')}`));
-    
+
     const child = spawn(command, args, {
       cwd,
       stdio: 'pipe',
@@ -56,39 +60,41 @@ const runCommand = (command: string, args: string[], cwd = process.cwd()): Promi
 };
 
 async function runAllTests() {
-  console.log(chalk.yellow.bold('🧪 Running complete test suite for Workspaces MCP\n'));
-  
+  console.log(
+    chalk.yellow.bold('🧪 Running complete test suite for Workspaces MCP\n')
+  );
+
   const results: TestResult[] = [];
-  
+
   // TypeScript type checking
   results.push(await runCommand('npm', ['run', 'typecheck']));
-  
+
   // Code linting
   results.push(await runCommand('npm', ['run', 'lint']));
-  
+
   // Code formatting check
   results.push(await runCommand('npm', ['run', 'format', '--', '--check']));
-  
+
   // Unit tests with coverage
   results.push(await runCommand('npm', ['run', 'test:coverage']));
-  
+
   // Build all packages
   results.push(await runCommand('npm', ['run', 'build']));
-  
+
   // Integration tests
   results.push(await runCommand('npm', ['run', 'test:integration']));
-  
+
   // Security audit
   results.push(await runCommand('npm', ['audit', '--audit-level', 'high']));
-  
+
   console.log(chalk.yellow.bold('\n📊 Test Results Summary:\n'));
-  
+
   let allPassed = true;
   results.forEach((result, index) => {
     const icon = result.passed ? '✅' : '❌';
     const status = result.passed ? chalk.green('PASSED') : chalk.red('FAILED');
     console.log(`${icon} ${status}: ${result.name}`);
-    
+
     if (!result.passed) {
       allPassed = false;
       if (result.error) {
@@ -96,9 +102,11 @@ async function runAllTests() {
       }
     }
   });
-  
-  console.log(`\n${allPassed ? '🎉' : '💥'} Overall: ${allPassed ? chalk.green('ALL TESTS PASSED') : chalk.red('SOME TESTS FAILED')}`);
-  
+
+  console.log(
+    `\n${allPassed ? '🎉' : '💥'} Overall: ${allPassed ? chalk.green('ALL TESTS PASSED') : chalk.red('SOME TESTS FAILED')}`
+  );
+
   if (allPassed) {
     console.log(chalk.green('\n✅ Ready for production deployment!'));
     console.log(chalk.blue('\nNext steps:'));
@@ -106,7 +114,9 @@ async function runAllTests() {
     console.log('  • Push the tag: git push origin v1.0.0');
     console.log('  • GitHub Actions will handle the rest!');
   } else {
-    console.log(chalk.red('\n❌ Please fix the failing tests before deploying.'));
+    console.log(
+      chalk.red('\n❌ Please fix the failing tests before deploying.')
+    );
     process.exit(1);
   }
 }
