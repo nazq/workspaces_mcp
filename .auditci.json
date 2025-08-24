@@ -2,7 +2,7 @@
   "moderate": false,
   "high": true,
   "critical": true,
-  "allowlist": ["GHSA-52f5-9888-hmc6", "GHSA-67mh-4wv8-2f99"],
+  "allowlist": [],
   "report-type": "full",
   "package-manager": "npm",
   "skip-dev": true
