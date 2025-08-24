@@ -11,6 +11,11 @@
   "bin": {
     "dxt-workspaces": "./dist/index.js"
   },
+  "files": [
+    "dist/**/*",
+    "package.json",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
