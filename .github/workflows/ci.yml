@@ -57,9 +57,11 @@ jobs:
         if: matrix.node == 20 && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v4
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
           fail_ci_if_error: false
-          verbose: true
 
   security:
     name: Security Audit
