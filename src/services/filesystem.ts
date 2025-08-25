@@ -1,6 +1,6 @@
-import path from 'node:path';
+import * as path from 'node:path';
 
-import fs from 'fs-extra';
+import * as fs from 'fs-extra';
 
 import { FileSystemError } from '../utils/errors.js';
 import type { Result } from '../utils/result.js';
@@ -32,14 +32,15 @@ export class FileSystemService {
     }
   }
 
-  async readFile(filePath: string): Promise<string> {
+  async readFile(filePath: string): Promise<Result<string>> {
     try {
-      return await fs.readFile(filePath, 'utf8');
+      const content = await fs.readFile(filePath, 'utf8');
+      return Ok(content);
     } catch (error) {
-      throw new FileSystemError(
+      return Err(new FileSystemError(
         `Failed to read file: ${filePath}`,
         error as Error
-      );
+      ));
     }
   }
 
@@ -150,14 +151,15 @@ export class FileSystemService {
     }
   }
 
-  async deleteFile(filePath: string): Promise<void> {
+  async deleteFile(filePath: string): Promise<Result<void>> {
     try {
       await fs.unlink(filePath);
+      return Ok(undefined);
     } catch (error) {
-      throw new FileSystemError(
+      return Err(new FileSystemError(
         `Failed to delete file: ${filePath}`,
         error as Error
-      );
+      ));
     }
   }
 
@@ -175,13 +177,14 @@ export class FileSystemService {
 
   async getFileStats(
     filePath: string
-  ): Promise<Result<{ size: number; mtime: Date; ctime: Date }>> {
+  ): Promise<Result<{ size: number; createdAt: Date; updatedAt: Date; isDirectory: boolean }>> {
     try {
       const stats = await fs.stat(filePath);
       return Ok({
         size: stats.size,
-        mtime: stats.mtime,
-        ctime: stats.ctime,
+        createdAt: stats.birthtime,
+        updatedAt: stats.mtime,
+        isDirectory: stats.isDirectory(),
       });
     } catch (error) {
       return Err(new FileSystemError(
@@ -191,3 +194,6 @@ export class FileSystemService {
     }
   }
 }
+
+// Export alias for compatibility
+export const NodeFileSystemService = FileSystemService;

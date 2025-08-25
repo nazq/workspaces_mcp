@@ -1,7 +1,7 @@
 // Workspace Service - Professional workspace management with Result pattern
 // Implements clean interfaces and comprehensive error handling
 
-import path from 'node:path';
+import * as path from 'node:path';
 
 import { EVENTS } from '../events/events.js';
 import type {

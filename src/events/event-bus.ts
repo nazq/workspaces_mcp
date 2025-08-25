@@ -154,7 +154,7 @@ export class AsyncEventBus implements EventBus {
     const events: Record<string, number> = {};
     let totalHandlers = 0;
 
-    for (const [event, handlers] of this.handlers.entries()) {
+    for (const [event, handlers] of Array.from(this.handlers.entries())) {
       events[event] = handlers.length;
       totalHandlers += handlers.length;
     }

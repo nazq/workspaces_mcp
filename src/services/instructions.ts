@@ -1,4 +1,4 @@
-import path from 'node:path';
+import * as path from 'node:path';
 
 import {
   DEFAULT_GLOBAL_INSTRUCTIONS,
@@ -73,9 +73,14 @@ export class InstructionsService {
       throw new Error(`Failed to get file stats for global instructions: ${statsResult.error.message}`);
     }
 
+    const contentResult = await this.fs.readFile(this.globalInstructionsPath);
+    if (isErr(contentResult)) {
+      throw new Error(`Failed to read global instructions: ${contentResult.error.message}`);
+    }
+
     return {
-      content,
-      lastModified: statsResult.data.mtime,
+      content: contentResult.data,
+      lastModified: statsResult.data.updatedAt,
     };
   }
 
@@ -121,9 +126,12 @@ export class InstructionsService {
       throw new SharedInstructionNotFoundError(name);
     }
 
-    const content = await this.fs.readFile(filePath);
+    const contentResult = await this.fs.readFile(filePath);
+    if (isErr(contentResult)) {
+      throw new Error(`Failed to read instruction ${name}: ${contentResult.error.message}`);
+    }
+
     const statsResult = await this.fs.getFileStats(filePath);
-    
     if (isErr(statsResult)) {
       throw new Error(`Failed to get file stats for ${name}: ${statsResult.error.message}`);
     }
@@ -131,9 +139,9 @@ export class InstructionsService {
     return {
       name,
       path: filePath,
-      content,
-      createdAt: statsResult.data.ctime,
-      updatedAt: statsResult.data.mtime,
+      content: contentResult.data,
+      createdAt: statsResult.data.createdAt,
+      updatedAt: statsResult.data.updatedAt,
     };
   }
 

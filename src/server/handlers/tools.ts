@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { getDefaultWorkspacesRoot } from '../../config/paths.js';
 import { AsyncEventBus } from '../../events/event-bus.js';
 import type { EventBus, FileSystemService, Logger } from '../../interfaces/services.js';
-import { NodeFileSystemProvider } from '../../layers/data/filesystem/node-provider.js';
+import { NodeFileSystemService } from '../../services/filesystem.js';
 import { InstructionsService } from '../../services/instructions.js';
 import { WorkspaceService } from '../../services/workspace.js';
 import type {
@@ -26,7 +26,7 @@ export class ToolHandler {
     const root = workspacesRoot ?? getDefaultWorkspacesRoot();
     
     // Create required dependencies
-    const fs: FileSystemService = new NodeFileSystemProvider();
+    const fs: FileSystemService = new NodeFileSystemService();
     const eventBus: EventBus = new AsyncEventBus();
     const logger: Logger = createChildLogger('ToolHandler');
     
