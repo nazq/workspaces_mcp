@@ -61,21 +61,27 @@ export class InstructionsService {
   }
 
   async getGlobalInstructions(): Promise<GlobalInstructions> {
-    const fileExistsResult = await this.fs.fileExists(this.globalInstructionsPath);
+    const fileExistsResult = await this.fs.fileExists(
+      this.globalInstructionsPath
+    );
     if (isErr(fileExistsResult) || !fileExistsResult.data) {
       await this.updateGlobalInstructions(DEFAULT_GLOBAL_INSTRUCTIONS);
     }
 
-    const content = await this.fs.readFile(this.globalInstructionsPath);
+    // Content will be read when needed
     const statsResult = await this.fs.getFileStats(this.globalInstructionsPath);
-    
+
     if (isErr(statsResult)) {
-      throw new Error(`Failed to get file stats for global instructions: ${statsResult.error.message}`);
+      throw new Error(
+        `Failed to get file stats for global instructions: ${statsResult.error.message}`
+      );
     }
 
     const contentResult = await this.fs.readFile(this.globalInstructionsPath);
     if (isErr(contentResult)) {
-      throw new Error(`Failed to read global instructions: ${contentResult.error.message}`);
+      throw new Error(
+        `Failed to read global instructions: ${contentResult.error.message}`
+      );
     }
 
     return {
@@ -85,7 +91,9 @@ export class InstructionsService {
   }
 
   async listSharedInstructions(): Promise<SharedInstruction[]> {
-    const existsResult = await this.fs.directoryExists(this.sharedInstructionsPath);
+    const existsResult = await this.fs.directoryExists(
+      this.sharedInstructionsPath
+    );
     if (isErr(existsResult) || !existsResult.data) {
       return [];
     }
@@ -128,12 +136,16 @@ export class InstructionsService {
 
     const contentResult = await this.fs.readFile(filePath);
     if (isErr(contentResult)) {
-      throw new Error(`Failed to read instruction ${name}: ${contentResult.error.message}`);
+      throw new Error(
+        `Failed to read instruction ${name}: ${contentResult.error.message}`
+      );
     }
 
     const statsResult = await this.fs.getFileStats(filePath);
     if (isErr(statsResult)) {
-      throw new Error(`Failed to get file stats for ${name}: ${statsResult.error.message}`);
+      throw new Error(
+        `Failed to get file stats for ${name}: ${statsResult.error.message}`
+      );
     }
 
     return {

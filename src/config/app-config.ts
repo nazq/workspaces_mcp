@@ -85,7 +85,7 @@ export type AppConfig = z.infer<typeof AppConfigSchema>;
 
 // Environment-aware configuration factory
 export const createEnvironmentConfig = (): Partial<AppConfig> => {
-  const config: Partial<AppConfig> = {};
+  const config: Record<string, any> = {};
 
   // Only set environment variables and computed defaults - let schema handle the rest
   if (process.env.WORKSPACES_ROOT || process.env.MAX_WORKSPACES) {
@@ -147,7 +147,7 @@ export const createEnvironmentConfig = (): Partial<AppConfig> => {
     };
   }
 
-  return config;
+  return config as Partial<AppConfig>;
 };
 
 // Simplified configuration loader - let Zod do the heavy lifting

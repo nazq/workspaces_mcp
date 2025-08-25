@@ -148,6 +148,44 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
     }
   }
 
+  async update(
+    name: string,
+    options: Partial<WorkspaceCreateOptions>
+  ): Promise<void> {
+    const workspacePath = this.getWorkspacePath(name);
+
+    if (!(await this.exists(name))) {
+      throw new Error(`Workspace '${name}' does not exist`);
+    }
+
+    try {
+      logger.debug(`Updating workspace: ${name} at ${workspacePath}`);
+
+      // Read existing metadata
+      const metadata = await this.getMetadata(name);
+
+      // Update metadata with new options
+      const updatedMetadata = {
+        name: metadata.name,
+        description: options.description ?? metadata.description,
+        createdAt: metadata.createdAt,
+        modifiedAt: new Date(),
+        template: options.template ?? (metadata as any).template,
+      };
+
+      const metadataPath = path.join(workspacePath, '.workspace.json');
+      await this.fs.writeFile(
+        metadataPath,
+        JSON.stringify(updatedMetadata, null, 2)
+      );
+
+      logger.info(`Workspace updated successfully: ${name}`);
+    } catch (error) {
+      logger.error(`Failed to update workspace: ${name}`, error);
+      throw new Error(`Unable to update workspace: ${name}`);
+    }
+  }
+
   async delete(name: string): Promise<void> {
     const workspacePath = this.getWorkspacePath(name);
 

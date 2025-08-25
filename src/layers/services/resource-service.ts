@@ -246,11 +246,16 @@ export class ResourceService implements IResourceService {
       }
 
       // Emit success event
-      const contentLength = result.data.contents.reduce(
-        (total, content) =>
-          total + (content.text?.length ?? content.blob?.length ?? 0),
-        0
-      );
+      const contentLength = result.data.contents.reduce((total, content) => {
+        if (content.text && typeof content.text === 'string') {
+          return total + content.text.length;
+        }
+        if (content.blob) {
+          // Blob content type {} doesn't have length - just count as present
+          return total;
+        }
+        return total;
+      }, 0);
 
       try {
         await this.eventBus.emit(EVENTS.RESOURCE_SERVED, {

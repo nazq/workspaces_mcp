@@ -10,8 +10,8 @@ import type {
   ToolService as IToolService,
   Logger,
   ToolContext,
-  ToolRegistry,
   ToolHandler,
+  ToolRegistry,
 } from '../../interfaces/services.js';
 import { CreateWorkspaceTool } from '../../tools/handlers/create-workspace-tool.js';
 import type { Result } from '../../utils/result.js';
@@ -90,10 +90,10 @@ export class ToolService implements IToolService {
       const tools = this.toolRegistry.listTools();
 
       this.logger.debug(`Registry contains ${tools.length} registered tools`, {
-        toolNames: tools.map((t) => t.name),
+        toolNames: tools.map((t) => (t as { name: string }).name),
       });
 
-      return Ok({ tools });
+      return Ok({ tools } as ListToolsResult);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to list tools from registry', error);

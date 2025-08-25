@@ -7,7 +7,11 @@ import type {
 import { MCP_RESOURCE_SCHEMES } from '../../config/constants.js';
 import { getDefaultWorkspacesRoot } from '../../config/paths.js';
 import { AsyncEventBus } from '../../events/event-bus.js';
-import type { EventBus, FileSystemService, Logger } from '../../interfaces/services.js';
+import type {
+  EventBus,
+  FileSystemService,
+  Logger,
+} from '../../interfaces/services.js';
 import { NodeFileSystemService } from '../../services/filesystem.js';
 import { InstructionsService } from '../../services/instructions.js';
 import { WorkspaceService } from '../../services/workspace.js';
@@ -21,14 +25,19 @@ export class ResourceHandler {
 
   constructor(workspacesRoot?: string) {
     const root = workspacesRoot ?? getDefaultWorkspacesRoot();
-    
+
     // Create required dependencies
     this.fs = new NodeFileSystemService();
     const eventBus: EventBus = new AsyncEventBus();
     const logger: Logger = createChildLogger('ResourceHandler');
-    
+
     this.instructionsService = new InstructionsService(root);
-    this.workspaceService = new WorkspaceService(root, this.fs, eventBus, logger);
+    this.workspaceService = new WorkspaceService(
+      root,
+      this.fs,
+      eventBus,
+      logger
+    );
   }
 
   async listResources(): Promise<ListResourcesResult> {
@@ -155,7 +164,7 @@ export class ResourceHandler {
       // Return workspace metadata with file list
       const workspaceResult =
         await this.workspaceService.getWorkspaceInfo(workspaceName);
-      
+
       if (isErr(workspaceResult)) {
         const message = workspaceResult.error?.message ?? 'Unknown error';
         throw new Error(`Failed to get workspace info: ${message}`);
@@ -164,9 +173,13 @@ export class ResourceHandler {
       // Get file list from workspace directory
       let files: string[] = [];
       try {
-        const workspacePathResult = await this.workspaceService.getWorkspacePath(workspaceName);
+        const workspacePathResult =
+          await this.workspaceService.getWorkspacePath(workspaceName);
         if (isOk(workspacePathResult)) {
-          const filesResult = await this.fs.listFiles(workspacePathResult.data, false);
+          const filesResult = await this.fs.listFiles(
+            workspacePathResult.data,
+            false
+          );
           if (isOk(filesResult)) {
             files = filesResult.data;
           }
@@ -178,9 +191,9 @@ export class ResourceHandler {
       // Add files to workspace metadata for resource response
       const workspaceMetadata = {
         ...workspaceResult.data,
-        files: files
+        files,
       };
-      
+
       return {
         contents: [
           {
@@ -196,12 +209,12 @@ export class ResourceHandler {
     const relativePath = parts.slice(1).join('/');
     const workspacePathResult =
       await this.workspaceService.getWorkspacePath(workspaceName);
-    
+
     if (isErr(workspacePathResult)) {
       const message = workspacePathResult.error?.message ?? 'Unknown error';
       throw new Error(`Failed to get workspace path: ${message}`);
     }
-    
+
     const filePath = `${workspacePathResult.data}/${relativePath}`;
 
     // Basic security check

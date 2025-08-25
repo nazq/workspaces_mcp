@@ -12,10 +12,12 @@ export class FileSystemService {
       await fs.ensureDir(dirPath);
       return Ok(undefined);
     } catch (error) {
-      return Err(new FileSystemError(
-        `Failed to ensure directory: ${dirPath}`,
-        error as Error
-      ));
+      return Err(
+        new FileSystemError(
+          `Failed to ensure directory: ${dirPath}`,
+          error as Error
+        )
+      );
     }
   }
 
@@ -25,10 +27,9 @@ export class FileSystemService {
       await fs.writeFile(filePath, content, 'utf8');
       return Ok(undefined);
     } catch (error) {
-      return Err(new FileSystemError(
-        `Failed to write file: ${filePath}`,
-        error as Error
-      ));
+      return Err(
+        new FileSystemError(`Failed to write file: ${filePath}`, error as Error)
+      );
     }
   }
 
@@ -37,10 +38,9 @@ export class FileSystemService {
       const content = await fs.readFile(filePath, 'utf8');
       return Ok(content);
     } catch (error) {
-      return Err(new FileSystemError(
-        `Failed to read file: ${filePath}`,
-        error as Error
-      ));
+      return Err(
+        new FileSystemError(`Failed to read file: ${filePath}`, error as Error)
+      );
     }
   }
 
@@ -57,7 +57,7 @@ export class FileSystemService {
     try {
       const stat = await fs.stat(dirPath);
       return Ok(stat.isDirectory());
-    } catch (error) {
+    } catch {
       // For directory existence checks, we return false instead of error
       return Ok(false);
     }
@@ -82,7 +82,7 @@ export class FileSystemService {
 
       for (const item of items) {
         if (item.startsWith('.')) continue;
-        
+
         const itemPath = path.join(dirPath, item);
         const stat = await fs.stat(itemPath);
         if (stat.isDirectory()) {
@@ -92,14 +92,19 @@ export class FileSystemService {
 
       return Ok(directories);
     } catch (error) {
-      return Err(new FileSystemError(
-        `Failed to list directories in: ${dirPath}`,
-        error as Error
-      ));
+      return Err(
+        new FileSystemError(
+          `Failed to list directories in: ${dirPath}`,
+          error as Error
+        )
+      );
     }
   }
 
-  async listFiles(dirPath: string, recursive = false): Promise<Result<string[]>> {
+  async listFiles(
+    dirPath: string,
+    recursive = false
+  ): Promise<Result<string[]>> {
     try {
       if (!recursive) {
         const items = await fs.readdir(dirPath);
@@ -144,10 +149,12 @@ export class FileSystemService {
       await processDirectory(dirPath);
       return Ok(files);
     } catch (error) {
-      return Err(new FileSystemError(
-        `Failed to list files in directory: ${dirPath}`,
-        error as Error
-      ));
+      return Err(
+        new FileSystemError(
+          `Failed to list files in directory: ${dirPath}`,
+          error as Error
+        )
+      );
     }
   }
 
@@ -156,10 +163,12 @@ export class FileSystemService {
       await fs.unlink(filePath);
       return Ok(undefined);
     } catch (error) {
-      return Err(new FileSystemError(
-        `Failed to delete file: ${filePath}`,
-        error as Error
-      ));
+      return Err(
+        new FileSystemError(
+          `Failed to delete file: ${filePath}`,
+          error as Error
+        )
+      );
     }
   }
 
@@ -168,16 +177,23 @@ export class FileSystemService {
       await fs.remove(dirPath);
       return Ok(undefined);
     } catch (error) {
-      return Err(new FileSystemError(
-        `Failed to delete directory: ${dirPath}`,
-        error as Error
-      ));
+      return Err(
+        new FileSystemError(
+          `Failed to delete directory: ${dirPath}`,
+          error as Error
+        )
+      );
     }
   }
 
-  async getFileStats(
-    filePath: string
-  ): Promise<Result<{ size: number; createdAt: Date; updatedAt: Date; isDirectory: boolean }>> {
+  async getFileStats(filePath: string): Promise<
+    Result<{
+      size: number;
+      createdAt: Date;
+      updatedAt: Date;
+      isDirectory: boolean;
+    }>
+  > {
     try {
       const stats = await fs.stat(filePath);
       return Ok({
@@ -187,10 +203,12 @@ export class FileSystemService {
         isDirectory: stats.isDirectory(),
       });
     } catch (error) {
-      return Err(new FileSystemError(
-        `Failed to get file stats: ${filePath}`,
-        error as Error
-      ));
+      return Err(
+        new FileSystemError(
+          `Failed to get file stats: ${filePath}`,
+          error as Error
+        )
+      );
     }
   }
 }

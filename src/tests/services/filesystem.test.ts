@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FileSystemService } from '../../services/filesystem.js';
 import { FileSystemError } from '../../utils/errors.js';
-import { isOk, isErr } from '../../utils/result.js';
+import { isErr, isOk } from '../../utils/result.js';
 
 describe('FileSystemService', () => {
   let fsService: FileSystemService;
@@ -40,28 +40,32 @@ describe('FileSystemService', () => {
       const filePath = path.join(tempDir, 'test.txt');
       const content = 'Hello, World!';
 
-      await fsService.writeFile(filePath, content);
-      const readContent = await fsService.readFile(filePath);
+      const writeResult = await fsService.writeFile(filePath, content);
+      expect(isOk(writeResult)).toBe(true);
 
-      expect(readContent).toBe(content);
+      const readResult = await fsService.readFile(filePath);
+      expect(isOk(readResult)).toBe(true);
+      expect(readResult.data).toBe(content);
     });
 
     it('should create parent directories when writing', async () => {
       const filePath = path.join(tempDir, 'nested', 'dir', 'test.txt');
       const content = 'Hello, World!';
 
-      await fsService.writeFile(filePath, content);
-      const readContent = await fsService.readFile(filePath);
+      const writeResult = await fsService.writeFile(filePath, content);
+      expect(isOk(writeResult)).toBe(true);
 
-      expect(readContent).toBe(content);
+      const readResult = await fsService.readFile(filePath);
+      expect(isOk(readResult)).toBe(true);
+      expect(readResult.data).toBe(content);
     });
 
-    it('should throw FileSystemError when reading non-existent file', async () => {
+    it('should return error when reading non-existent file', async () => {
       const filePath = path.join(tempDir, 'non-existent.txt');
 
-      await expect(fsService.readFile(filePath)).rejects.toThrow(
-        FileSystemError
-      );
+      const result = await fsService.readFile(filePath);
+      expect(isErr(result)).toBe(true);
+      expect(result.error).toBeInstanceOf(FileSystemError);
     });
   });
 

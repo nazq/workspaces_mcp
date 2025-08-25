@@ -34,11 +34,14 @@ export class ToolRegistry implements IToolRegistry {
   }
 
   listTools(): Tool[] {
-    return Array.from(this.handlers.values()).map((handler) => ({
-      name: handler.name,
-      description: handler.description,
-      inputSchema: this.zodToJsonSchema(handler.inputSchema),
-    }));
+    return Array.from(this.handlers.values()).map(
+      (handler) =>
+        ({
+          name: handler.name,
+          description: handler.description,
+          inputSchema: this.zodToJsonSchema(handler.inputSchema),
+        }) as Tool
+    );
   }
 
   async execute(
@@ -55,7 +58,7 @@ export class ToolRegistry implements IToolRegistry {
       }
 
       // Validate arguments using the handler's schema
-      const parseResult = handler.inputSchema.safeParse(args);
+      const parseResult = (handler.inputSchema as any).safeParse(args);
       if (!parseResult.success) {
         const error = new Error(
           `Invalid arguments: ${parseResult.error.message}`
@@ -173,7 +176,7 @@ export class ToolRegistry implements IToolRegistry {
   }
 
   // Convert Zod schema to JSON Schema for MCP
-  private zodToJsonSchema(zodSchema: z.ZodSchema): Record<string, unknown> {
+  private zodToJsonSchema(zodSchema: any): Record<string, unknown> {
     // Basic conversion - in a real implementation, you'd use a library like zod-to-json-schema
     // For now, we'll use a simplified approach
 
@@ -185,13 +188,13 @@ export class ToolRegistry implements IToolRegistry {
       for (const [key, value] of Object.entries(shape)) {
         if (value instanceof z.ZodString) {
           properties[key] = { type: 'string' };
-          if (!value.isOptional()) required.push(key);
+          if (!(value as any).isOptional()) required.push(key);
         } else if (value instanceof z.ZodNumber) {
           properties[key] = { type: 'number' };
-          if (!value.isOptional()) required.push(key);
+          if (!(value as any).isOptional()) required.push(key);
         } else if (value instanceof z.ZodBoolean) {
           properties[key] = { type: 'boolean' };
-          if (!value.isOptional()) required.push(key);
+          if (!(value as any).isOptional()) required.push(key);
         } else {
           // Fallback for complex types
           properties[key] = { type: 'object' };

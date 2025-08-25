@@ -1,6 +1,5 @@
 // Test MCP Tools Command
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-
+import { isErr } from '../../../utils/result.js';
 import type { ToolService } from '../../services/tool-service.js';
 import { BaseCliCommand, type CliContext } from '../interface.js';
 
@@ -23,21 +22,36 @@ export class TestToolsCommand extends BaseCliCommand {
 
     try {
       // List available tools
-      const tools = await this.toolService.listTools();
+      const toolsResult = await this.toolService.listTools();
+
+      if (isErr(toolsResult)) {
+        this.context.output.error(
+          `Failed to list tools: ${toolsResult.error.message}`
+        );
+        return;
+      }
+
+      const tools = toolsResult.data.tools;
 
       if (listOnly || remaining.length === 0) {
-        this.context.output.info(`Available tools (${tools.tools.length}):`);
+        this.context.output.info(`Available tools (${tools.length}):`);
 
         if (verbose) {
           this.context.output.table(
-            tools.tools.map((tool: Tool) => ({
-              name: tool.name,
-              description: tool.description || 'No description',
-              'input-schema': tool.inputSchema ? 'defined' : 'none',
-            }))
+            tools.map(
+              (tool: {
+                name: string;
+                description?: string;
+                inputSchema?: unknown;
+              }) => ({
+                name: tool.name,
+                description: tool.description || 'No description',
+                'input-schema': tool.inputSchema ? 'defined' : 'none',
+              })
+            )
           );
         } else {
-          tools.tools.forEach((tool: Tool) => {
+          tools.forEach((tool: { name: string; description?: string }) => {
             this.context.output.success(
               `${tool.name}: ${tool.description || 'No description'}`
             );
@@ -48,12 +62,12 @@ export class TestToolsCommand extends BaseCliCommand {
 
       // Test specific tool
       const [toolName] = remaining;
-      const tool = tools.tools.find((t: Tool) => t.name === toolName);
+      const tool = tools.find((t: { name: string }) => t.name === toolName);
 
       if (!tool) {
         this.context.output.error(`Tool '${toolName}' not found`);
         this.context.output.info('Available tools:');
-        tools.tools.forEach((t: Tool) =>
+        tools.forEach((t: { name: string }) =>
           this.context.output.info(`  - ${t.name}`)
         );
         return;
@@ -73,16 +87,24 @@ export class TestToolsCommand extends BaseCliCommand {
       if (toolName === 'list-workspaces') {
         this.context.output.info('Executing list-workspaces...');
         const result = await this.toolService.callTool(toolName, {});
+
+        if (isErr(result)) {
+          this.context.output.error(
+            `Tool execution failed: ${result.error.message}`
+          );
+          return;
+        }
+
         this.context.output.success('Tool executed successfully');
 
         if (verbose) {
-          this.context.output.json(result);
+          this.context.output.json(result.data);
         } else {
-          this.context.output.info(
-            `Result: ${result.isError ? 'Error' : 'Success'}`
-          );
-          if (result.content) {
-            this.context.output.info(`Content items: ${result.content.length}`);
+          this.context.output.info('Result: Success');
+          if (result.data.content) {
+            this.context.output.info(
+              `Content items: ${result.data.content.length}`
+            );
           }
         }
       } else {

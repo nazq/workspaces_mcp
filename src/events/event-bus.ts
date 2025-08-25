@@ -5,7 +5,7 @@ import type { EventBus, EventHandler, Logger } from '../interfaces/services.js';
 import { createChildLogger } from '../utils/logger.js';
 
 export class AsyncEventBus implements EventBus {
-  private handlers = new Map<string, EventHandler[]>();
+  private handlers = new Map<string, EventHandler<any>[]>();
   private logger: Logger;
   private maxListeners = 100; // Prevent memory leaks
 
@@ -43,7 +43,7 @@ export class AsyncEventBus implements EventBus {
       this.handlers.set(event, []);
     }
 
-    const handlers = this.handlers.get(event) as EventHandler[];
+    const handlers = this.handlers.get(event) as EventHandler<any>[];
 
     // Prevent memory leaks
     if (handlers.length >= this.maxListeners) {
@@ -52,14 +52,14 @@ export class AsyncEventBus implements EventBus {
       );
     }
 
-    handlers.push(handler);
+    handlers.push(handler as EventHandler<any>);
     this.logger.debug(
       `Handler registered for event: ${event} (${handlers.length} total)`
     );
 
     // Return unsubscribe function
     return () => {
-      const index = handlers.indexOf(handler);
+      const index = handlers.indexOf(handler as EventHandler<any>);
       if (index > -1) {
         handlers.splice(index, 1);
         this.logger.debug(
@@ -82,7 +82,7 @@ export class AsyncEventBus implements EventBus {
     this.on(event, wrappedHandler);
   }
 
-  off(event: string, handler?: EventHandler): void {
+  off(event: string, handler?: EventHandler<any>): void {
     if (!handler) {
       // Remove all handlers for event
       this.handlers.delete(event);

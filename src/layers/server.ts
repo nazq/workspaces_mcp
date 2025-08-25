@@ -14,8 +14,10 @@ import {
   getGlobalInstructionsPath,
   getSharedInstructionsPath,
 } from '../config/paths.js';
+import { AsyncEventBus } from '../events/event-bus.js';
 import { ToolRegistry } from '../tools/registry.js';
 import { createChildLogger } from '../utils/logger.js';
+import { isErr } from '../utils/result.js';
 
 import { ControllerFactory } from './controllers/index.js';
 import {
@@ -71,18 +73,23 @@ export class WorkspacesMcpServer {
     );
 
     // Layer 4: Services Layer
-    const resourceService = new ResourceService({
-      workspaceRepository,
-      instructionsRepository,
-    });
+    // Create event bus for service communication
+    const eventBus = new AsyncEventBus();
+
+    const resourceService = new ResourceService(
+      workspaceRepository as any,
+      instructionsRepository as any,
+      eventBus,
+      logger
+    );
 
     const toolRegistry = new ToolRegistry();
     const toolService = new ToolService(toolRegistry, logger);
 
     // Layer 3: Controllers Layer (for future protocol processor integration)
     const controllers = ControllerFactory.createAll({
-      resourceService,
-      toolService,
+      resourceService: resourceService as any,
+      toolService: toolService as any,
     });
 
     // Layer 2: Protocol Layer (for future enhancement)
@@ -125,25 +132,41 @@ export class WorkspacesMcpServer {
     // Direct service integration for now - proper protocol layer integration later
 
     this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
-      return await resourceService.listResources();
+      const result = await resourceService.listResources();
+      if (isErr(result)) {
+        throw new Error(result.error.message);
+      }
+      return result.data;
     });
 
     this.server.setRequestHandler(
       ReadResourceRequestSchema,
       async (request) => {
-        return await resourceService.readResource(request.params.uri);
+        const result = await resourceService.readResource(request.params.uri);
+        if (isErr(result)) {
+          throw new Error(result.error.message);
+        }
+        return result.data;
       }
     );
 
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      return await toolService.listTools();
+      const result = await toolService.listTools();
+      if (isErr(result)) {
+        throw new Error(result.error.message);
+      }
+      return result.data;
     });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      return await toolService.callTool(
+      const result = await toolService.callTool(
         request.params.name,
         request.params.arguments
       );
+      if (isErr(result)) {
+        throw new Error(result.error.message);
+      }
+      return result.data;
     });
 
     logger.debug(
