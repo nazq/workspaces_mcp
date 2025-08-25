@@ -1,663 +1,504 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 
-import type { Logger } from '../../../interfaces/services.js';
 import type {
-  InstructionsRepository,
-  WorkspaceRepository,
-} from '../../../layers/data/index.js';
+  EventBus,
+  Logger,
+  ToolContext,
+  ToolHandler,
+  ToolRegistry,
+} from '../../../interfaces/services.js';
 import { ToolService } from '../../../layers/services/tool-service.js';
-import { ToolRegistry } from '../../../tools/registry.js';
-import type {
-  SharedInstruction,
-  WorkspaceMetadata,
-} from '../../../types/index.js';
+import { Ok, Err } from '../../../utils/result.js';
 
-// Mock logger to avoid console output during tests
-vi.mock('../../../utils/logger.js', () => ({
-  createChildLogger: () => ({
-    debug: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
+// Mock tool handler for testing
+const createMockToolHandler = (name: string = 'mock-tool'): ToolHandler => ({
+  name,
+  description: `Mock tool: ${name}`,
+  inputSchema: z.object({
+    message: z.string(),
+    count: z.number().optional(),
   }),
-}));
+  async execute(args: any) {
+    return Ok({
+      content: [
+        {
+          type: 'text' as const,
+          text: `Mock executed ${name} with: ${args.message}`,
+        },
+      ],
+    });
+  },
+});
+
+// Mock failing tool handler
+const createFailingToolHandler = (): ToolHandler => ({
+  name: 'failing-tool',
+  description: 'Tool that always fails',
+  inputSchema: z.object({
+    message: z.string(),
+  }),
+  async execute() {
+    return Err(new Error('Tool execution failed'));
+  },
+});
+
+// Mock ToolRegistry
+const createMockToolRegistry = (): ToolRegistry => ({
+  register: vi.fn(),
+  unregister: vi.fn(),
+  listTools: vi.fn().mockReturnValue([
+    {
+      name: 'create_workspace',
+      description: 'Create a new workspace',
+      inputSchema: { type: 'object', properties: {} },
+    } as Tool,
+  ]),
+  execute: vi.fn().mockResolvedValue(Ok({
+    content: [{ type: 'text', text: 'Success' }],
+  })),
+  hasHandler: vi.fn().mockReturnValue(true),
+  getHandlerNames: vi.fn().mockReturnValue(['create_workspace']),
+  getHandler: vi.fn(),
+  clear: vi.fn(),
+});
+
+// Mock logger
+const createMockLogger = (): Logger => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
+});
+
+// Mock context
+const createMockContext = (): ToolContext => ({
+  workspaceRepository: {} as any,
+  instructionsRepository: {} as any,
+  config: {} as any,
+  logger: createMockLogger(),
+  eventBus: {
+    emit: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
+    once: vi.fn(),
+    off: vi.fn(),
+    removeAllListeners: vi.fn(),
+  } as EventBus,
+});
 
 describe('ToolService', () => {
   let toolService: ToolService;
-  let mockWorkspaceRepository: WorkspaceRepository;
-  let mockInstructionsRepository: InstructionsRepository;
-
-  const mockWorkspaceMetadata: WorkspaceMetadata = {
-    name: 'test-workspace',
-    description: 'A test workspace',
-    path: '/path/to/workspace',
-    createdAt: new Date('2024-01-01T00:00:00Z'),
-    modifiedAt: new Date('2024-01-02T00:00:00Z'),
-  };
-
-  const mockSharedInstruction: SharedInstruction = {
-    name: 'react-guide',
-    description: 'React development guide',
-    content: '# React Guide\n\nUse hooks and functional components.',
-    createdAt: new Date('2024-01-01T00:00:00Z'),
-    modifiedAt: new Date('2024-01-01T00:00:00Z'),
-  };
+  let mockToolRegistry: ToolRegistry;
+  let mockLogger: Logger;
+  let mockContext: ToolContext;
 
   beforeEach(() => {
-    // Create mock repositories
-    mockWorkspaceRepository = {
-      list: vi.fn(),
-      create: vi.fn(),
-      getMetadata: vi.fn(),
-    } as any;
-
-    mockInstructionsRepository = {
-      listShared: vi.fn(),
-      createShared: vi.fn(),
-      updateGlobal: vi.fn(),
-    } as any;
-
-    // Create mock logger
-    const mockLogger: Logger = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      fatal: vi.fn(),
-    };
-
-    // Create tool registry and service
-    const toolRegistry = new ToolRegistry();
-    toolService = new ToolService(toolRegistry, mockLogger);
+    mockToolRegistry = createMockToolRegistry();
+    mockLogger = createMockLogger();
+    mockContext = createMockContext();
+    toolService = new ToolService(mockToolRegistry, mockLogger);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  describe('Initialization', () => {
+    it('should initialize with default tools', () => {
+      expect(mockToolRegistry.register).toHaveBeenCalled();
+      expect(mockLogger.info).toHaveBeenCalledWith('Default tool handlers initialized successfully');
+    });
+
+    it('should handle initialization errors', () => {
+      const failingRegistry = createMockToolRegistry();
+      vi.mocked(failingRegistry.register).mockImplementation(() => {
+        throw new Error('Registration failed');
+      });
+
+      expect(() => new ToolService(failingRegistry, mockLogger)).toThrow(
+        'Tool service initialization failed'
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to initialize default tool handlers',
+        expect.any(Error)
+      );
+    });
   });
 
   describe('listTools', () => {
-    it('should return all available tools', async () => {
+    it('should successfully list tools', async () => {
       const result = await toolService.listTools();
 
-      expect(result.tools).toHaveLength(6);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.tools).toHaveLength(1);
+        expect(result.data.tools[0]?.name).toBe('create_workspace');
+      }
 
-      const toolNames = result.tools.map((tool) => tool.name);
-      expect(toolNames).toContain('create_workspace');
-      expect(toolNames).toContain('list_workspaces');
-      expect(toolNames).toContain('get_workspace_info');
-      expect(toolNames).toContain('create_shared_instruction');
-      expect(toolNames).toContain('list_shared_instructions');
-      expect(toolNames).toContain('update_global_instructions');
+      expect(mockToolRegistry.listTools).toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith('Listing all available tools from registry');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Registry contains 1 registered tools',
+        { toolNames: ['create_workspace'] }
+      );
     });
 
-    it('should include proper schemas for each tool', async () => {
-      const result = await toolService.listTools();
-
-      const createWorkspaceTool = result.tools.find(
-        (tool) => tool.name === 'create_workspace'
-      );
-      expect(createWorkspaceTool?.inputSchema).toBeDefined();
-      expect(createWorkspaceTool?.inputSchema.properties).toHaveProperty(
-        'name'
-      );
-      expect(createWorkspaceTool?.inputSchema.required).toContain('name');
-
-      const createInstructionTool = result.tools.find(
-        (tool) => tool.name === 'create_shared_instruction'
-      );
-      expect(createInstructionTool?.inputSchema.required).toEqual([
-        'name',
-        'content',
-      ]);
-    });
-
-    it('should include descriptions for all tools', async () => {
-      const result = await toolService.listTools();
-
-      result.tools.forEach((tool) => {
-        expect(tool.description).toBeDefined();
-        expect(typeof tool.description).toBe('string');
-        expect(tool.description.length).toBeGreaterThan(0);
+    it('should handle errors when listing tools', async () => {
+      vi.mocked(mockToolRegistry.listTools).mockImplementation(() => {
+        throw new Error('Registry error');
       });
+
+      const result = await toolService.listTools();
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toContain('Tool listing failed');
+      }
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to list tools from registry',
+        expect.any(Error)
+      );
+    });
+
+    it('should handle non-Error exceptions', async () => {
+      vi.mocked(mockToolRegistry.listTools).mockImplementation(() => {
+        throw 'String error';
+      });
+
+      const result = await toolService.listTools();
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toBe('Tool listing failed: String error');
+      }
     });
   });
 
   describe('callTool', () => {
-    describe('create_workspace', () => {
-      it('should create workspace with required arguments', async () => {
-        const args = { name: 'test-workspace' };
-        vi.mocked(mockWorkspaceRepository.create).mockResolvedValue();
+    it('should successfully execute a tool', async () => {
+      const result = await toolService.callTool(
+        'create_workspace',
+        { name: 'test' },
+        mockContext
+      );
 
-        const result = await toolService.callTool('create_workspace', args);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.content[0]?.text).toBe('Success');
+      }
 
-        expect(mockWorkspaceRepository.create).toHaveBeenCalledWith(
-          'test-workspace',
-          {}
+      expect(mockToolRegistry.hasHandler).toHaveBeenCalledWith('create_workspace');
+      expect(mockToolRegistry.execute).toHaveBeenCalledWith(
+        'create_workspace',
+        { name: 'test' },
+        mockContext
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Executing tool via registry: create_workspace',
+        { args: { name: 'test' } }
+      );
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Tool executed successfully: create_workspace'
+      );
+    });
+
+    it('should handle unknown tool error', async () => {
+      vi.mocked(mockToolRegistry.hasHandler).mockReturnValue(false);
+      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue(['tool1', 'tool2']);
+
+      const result = await toolService.callTool('unknown-tool', {}, mockContext);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toBe(
+          "Unknown tool: 'unknown-tool'. Available tools: tool1, tool2"
         );
-        expect(result.content).toHaveLength(1);
-        expect(result.content[0]?.text).toContain(
-          "Workspace 'test-workspace' created successfully"
-        );
-        expect(result.isError).toBeUndefined();
+      }
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Tool execution failed - unknown tool',
+        {
+          requestedTool: 'unknown-tool',
+          availableTools: ['tool1', 'tool2'],
+        }
+      );
+    });
+
+    it('should handle tool execution errors', async () => {
+      const executionError = new Error('Tool failed');
+      vi.mocked(mockToolRegistry.execute).mockResolvedValue(Err(executionError));
+
+      const result = await toolService.callTool('create_workspace', {}, mockContext);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBe(executionError);
+      }
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Tool execution failed: create_workspace',
+        {
+          error: executionError,
+          args: {},
+        }
+      );
+    });
+
+    it('should handle missing context with warning', async () => {
+      const result = await toolService.callTool('create_workspace', { name: 'test' });
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'No tool context provided, tool execution may fail'
+      );
+      expect(mockToolRegistry.execute).toHaveBeenCalled();
+    });
+
+    it('should handle unexpected errors during execution', async () => {
+      vi.mocked(mockToolRegistry.execute).mockRejectedValue(new Error('Unexpected error'));
+
+      const result = await toolService.callTool('create_workspace', {}, mockContext);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toContain('Tool execution failed');
+      }
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Unexpected error executing tool: create_workspace',
+        {
+          error: expect.any(Error),
+          args: {},
+        }
+      );
+    });
+
+    it('should handle non-Error exceptions', async () => {
+      vi.mocked(mockToolRegistry.execute).mockRejectedValue('String error');
+
+      const result = await toolService.callTool('create_workspace', {}, mockContext);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toBe('Tool execution failed: String error');
+      }
+    });
+
+    it('should use default empty args when none provided', async () => {
+      await toolService.callTool('create_workspace', undefined, mockContext);
+
+      expect(mockToolRegistry.execute).toHaveBeenCalledWith(
+        'create_workspace',
+        {},
+        mockContext
+      );
+    });
+  });
+
+  describe('registerTool', () => {
+    it('should successfully register a tool', () => {
+      const mockHandler = createMockToolHandler('new-tool');
+
+      const result = toolService.registerTool(mockHandler);
+
+      expect(result.success).toBe(true);
+      expect(mockToolRegistry.register).toHaveBeenCalledWith(mockHandler);
+      expect(mockLogger.info).toHaveBeenCalledWith('Tool handler registered: new-tool');
+    });
+
+    it('should handle registration errors', () => {
+      const mockHandler = createMockToolHandler('duplicate-tool');
+      vi.mocked(mockToolRegistry.register).mockImplementation(() => {
+        throw new Error('Tool already exists');
       });
 
-      it('should create workspace with optional arguments', async () => {
-        const args = {
-          name: 'test-workspace',
-          description: 'Test description',
-          template: 'react-ts',
-        };
-        vi.mocked(mockWorkspaceRepository.create).mockResolvedValue();
+      const result = toolService.registerTool(mockHandler);
 
-        const result = await toolService.callTool('create_workspace', args);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toContain('Tool registration failed');
+      }
 
-        expect(mockWorkspaceRepository.create).toHaveBeenCalledWith(
-          'test-workspace',
-          {
-            description: 'Test description',
-            template: 'react-ts',
-          }
-        );
-        expect(result.content[0]?.text).toContain(
-          "Workspace 'test-workspace' created successfully"
-        );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to register tool handler',
+        expect.any(Error)
+      );
+    });
+
+    it('should handle non-Error exceptions during registration', () => {
+      const mockHandler = createMockToolHandler('error-tool');
+      vi.mocked(mockToolRegistry.register).mockImplementation(() => {
+        throw 'String error';
       });
 
-      it('should handle workspace creation errors', async () => {
-        const args = { name: 'test-workspace' };
-        vi.mocked(mockWorkspaceRepository.create).mockRejectedValue(
-          new Error('Workspace already exists')
-        );
+      const result = toolService.registerTool(mockHandler);
 
-        const result = await toolService.callTool('create_workspace', args);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toBe('Tool registration failed: String error');
+      }
+    });
+  });
 
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('Workspace already exists');
+  describe('unregisterTool', () => {
+    it('should successfully unregister a tool', () => {
+      const result = toolService.unregisterTool('test-tool');
+
+      expect(result.success).toBe(true);
+      expect(mockToolRegistry.unregister).toHaveBeenCalledWith('test-tool');
+      expect(mockLogger.info).toHaveBeenCalledWith('Tool handler unregistered: test-tool');
+    });
+
+    it('should handle unregistration errors', () => {
+      vi.mocked(mockToolRegistry.unregister).mockImplementation(() => {
+        throw new Error('Unregistration failed');
       });
 
-      it('should validate arguments schema', async () => {
-        const args = { name: '' }; // Invalid: empty name
+      const result = toolService.unregisterTool('test-tool');
 
-        const result = await toolService.callTool('create_workspace', args);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toContain('Tool unregistration failed');
+      }
 
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('Error executing tool');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to unregister tool handler: test-tool',
+        expect.any(Error)
+      );
+    });
+
+    it('should handle non-Error exceptions during unregistration', () => {
+      vi.mocked(mockToolRegistry.unregister).mockImplementation(() => {
+        throw 'String error';
       });
 
-      it('should handle missing name argument', async () => {
-        const args = {}; // Missing required name
+      const result = toolService.unregisterTool('test-tool');
 
-        const result = await toolService.callTool('create_workspace', args);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.message).toBe('Tool unregistration failed: String error');
+      }
+    });
+  });
 
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('Error executing tool');
+  describe('getRegisteredTools', () => {
+    it('should return list of registered tool names', () => {
+      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue(['tool1', 'tool2', 'tool3']);
+
+      const result = toolService.getRegisteredTools();
+
+      expect(result).toEqual(['tool1', 'tool2', 'tool3']);
+      expect(mockToolRegistry.getHandlerNames).toHaveBeenCalled();
+    });
+
+    it('should return empty array when no tools registered', () => {
+      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue([]);
+
+      const result = toolService.getRegisteredTools();
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getToolStatistics', () => {
+    it('should return comprehensive tool statistics', () => {
+      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue([
+        'create_workspace',
+        'list_workspaces',
+        'delete_workspace',
+      ]);
+
+      const result = toolService.getToolStatistics();
+
+      expect(result).toEqual({
+        totalTools: 3,
+        toolNames: ['create_workspace', 'list_workspaces', 'delete_workspace'],
+        registryType: 'ToolRegistry (Modern Architecture)',
       });
     });
 
-    describe('list_workspaces', () => {
-      it('should list workspaces successfully', async () => {
-        const workspace2 = { ...mockWorkspaceMetadata, name: 'workspace2' };
-        vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([
-          mockWorkspaceMetadata,
-          workspace2,
-        ]);
+    it('should handle empty registry', () => {
+      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue([]);
 
-        const result = await toolService.callTool('list_workspaces', {});
+      const result = toolService.getToolStatistics();
 
-        expect(result.content).toHaveLength(1);
-        expect(result.content[0]?.text).toContain('Available workspaces (2)');
-        expect(result.content[0]?.text).toContain('test-workspace');
-        expect(result.content[0]?.text).toContain('workspace2');
-        expect(result.isError).toBeUndefined();
-      });
-
-      it('should handle empty workspace list', async () => {
-        vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([]);
-
-        const result = await toolService.callTool('list_workspaces', {});
-
-        expect(result.content[0]?.text).toBe('No workspaces found');
-      });
-
-      it('should include workspace descriptions', async () => {
-        vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([
-          mockWorkspaceMetadata,
-        ]);
-
-        const result = await toolService.callTool('list_workspaces', {});
-
-        expect(result.content[0]?.text).toContain('A test workspace');
-      });
-
-      it('should handle workspaces without descriptions', async () => {
-        const workspaceWithoutDescription = {
-          ...mockWorkspaceMetadata,
-          description: undefined,
-        };
-        vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([
-          workspaceWithoutDescription,
-        ]);
-
-        const result = await toolService.callTool('list_workspaces', {});
-
-        expect(result.content[0]?.text).toContain('test-workspace');
-        // Should not have description colon after workspace name
-        expect(result.content[0]?.text).toContain('- test-workspace');
-        expect(result.content[0]?.text).not.toContain('test-workspace:');
-      });
-
-      it('should handle repository errors', async () => {
-        vi.mocked(mockWorkspaceRepository.list).mockRejectedValue(
-          new Error('Database connection failed')
-        );
-
-        const result = await toolService.callTool('list_workspaces', {});
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('Database connection failed');
+      expect(result).toEqual({
+        totalTools: 0,
+        toolNames: [],
+        registryType: 'ToolRegistry (Modern Architecture)',
       });
     });
+  });
 
-    describe('get_workspace_info', () => {
-      it('should get workspace info successfully', async () => {
-        const args = { name: 'test-workspace' };
-        vi.mocked(mockWorkspaceRepository.getMetadata).mockResolvedValue(
-          mockWorkspaceMetadata
-        );
+  describe('Error Handling Edge Cases', () => {
+    it('should handle registry being null or undefined gracefully', () => {
+      // This tests the error handling in initialization
+      const failingRegistry = {
+        register: vi.fn().mockImplementation(() => {
+          throw new TypeError('Cannot read properties of null');
+        }),
+      } as any;
 
-        const result = await toolService.callTool('get_workspace_info', args);
-
-        expect(mockWorkspaceRepository.getMetadata).toHaveBeenCalledWith(
-          'test-workspace'
-        );
-        expect(result.content[0]?.text).toContain('Name: test-workspace');
-        expect(result.content[0]?.text).toContain(
-          'Description: A test workspace'
-        );
-        expect(result.content[0]?.text).toContain('Path: /path/to/workspace');
-        expect(result.content[0]?.text).toContain(
-          'Created: 2024-01-01T00:00:00.000Z'
-        );
-        expect(result.content[0]?.text).toContain(
-          'Modified: 2024-01-02T00:00:00.000Z'
-        );
-      });
-
-      it('should handle workspace without description', async () => {
-        const workspaceWithoutDescription = {
-          ...mockWorkspaceMetadata,
-          description: undefined,
-        };
-        const args = { name: 'test-workspace' };
-        vi.mocked(mockWorkspaceRepository.getMetadata).mockResolvedValue(
-          workspaceWithoutDescription
-        );
-
-        const result = await toolService.callTool('get_workspace_info', args);
-
-        expect(result.content[0]?.text).not.toContain('Description:');
-        expect(result.content[0]?.text).toContain('Name: test-workspace');
-      });
-
-      it('should handle non-existent workspace', async () => {
-        const args = { name: 'non-existent' };
-        vi.mocked(mockWorkspaceRepository.getMetadata).mockRejectedValue(
-          new Error('Workspace not found')
-        );
-
-        const result = await toolService.callTool('get_workspace_info', args);
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('Workspace not found');
-      });
-
-      it('should validate arguments', async () => {
-        const args = { name: '' }; // Invalid: empty name
-
-        const result = await toolService.callTool('get_workspace_info', args);
-
-        expect(result.isError).toBe(true);
-      });
+      expect(() => new ToolService(failingRegistry, mockLogger)).toThrow(
+        'Tool service initialization failed'
+      );
     });
 
-    describe('create_shared_instruction', () => {
-      it('should create shared instruction with required arguments', async () => {
-        const args = {
-          name: 'react-guide',
-          content: '# React Guide\n\nUse hooks.',
-        };
-        vi.mocked(mockInstructionsRepository.createShared).mockResolvedValue();
+    it('should handle context being null during tool execution', async () => {
+      const result = await toolService.callTool('create_workspace', {}, null as any);
 
-        const result = await toolService.callTool(
-          'create_shared_instruction',
-          args
-        );
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'No tool context provided, tool execution may fail'
+      );
+      expect(mockToolRegistry.execute).toHaveBeenCalledWith(
+        'create_workspace',
+        {},
+        null
+      );
+    });
+  });
 
-        expect(mockInstructionsRepository.createShared).toHaveBeenCalledWith(
-          'react-guide',
-          {
-            name: 'react-guide',
-            content: '# React Guide\n\nUse hooks.',
-            description: undefined,
-            variables: {},
-          }
-        );
-        expect(result.content[0]?.text).toContain(
-          "Shared instruction 'react-guide' created successfully"
-        );
-      });
+  describe('Integration Scenarios', () => {
+    it('should handle complete workflow: register, list, execute, unregister', async () => {
+      const handler = createMockToolHandler('workflow-tool');
 
-      it('should create shared instruction with all optional arguments', async () => {
-        const args = {
-          name: 'react-guide',
-          content: '# React Guide\n\nUse hooks.',
-          description: 'Guide for React development',
-          variables: { framework: 'React', version: '18' },
-        };
-        vi.mocked(mockInstructionsRepository.createShared).mockResolvedValue();
+      // Register
+      const registerResult = toolService.registerTool(handler);
+      expect(registerResult.success).toBe(true);
 
-        const result = await toolService.callTool(
-          'create_shared_instruction',
-          args
-        );
+      // List tools
+      const listResult = await toolService.listTools();
+      expect(listResult.success).toBe(true);
 
-        expect(mockInstructionsRepository.createShared).toHaveBeenCalledWith(
-          'react-guide',
-          {
-            name: 'react-guide',
-            content: '# React Guide\n\nUse hooks.',
-            description: 'Guide for React development',
-            variables: { framework: 'React', version: '18' },
-          }
-        );
-        expect(result.content[0]?.text).toContain(
-          "Shared instruction 'react-guide' created successfully"
-        );
-      });
+      // Execute tool
+      const executeResult = await toolService.callTool('workflow-tool', { message: 'test' }, mockContext);
+      expect(executeResult.success).toBe(true);
 
-      it('should handle creation errors', async () => {
-        const args = {
-          name: 'react-guide',
-          content: '# React Guide',
-        };
-        vi.mocked(mockInstructionsRepository.createShared).mockRejectedValue(
-          new Error('Instruction already exists')
-        );
+      // Unregister
+      const unregisterResult = toolService.unregisterTool('workflow-tool');
+      expect(unregisterResult.success).toBe(true);
 
-        const result = await toolService.callTool(
-          'create_shared_instruction',
-          args
-        );
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('Instruction already exists');
-      });
-
-      it('should validate required arguments', async () => {
-        const args = { name: 'test' }; // Missing content
-
-        const result = await toolService.callTool(
-          'create_shared_instruction',
-          args
-        );
-
-        expect(result.isError).toBe(true);
-      });
-
-      it('should handle empty content validation', async () => {
-        const args = { name: 'test', content: '' }; // Empty content
-
-        const result = await toolService.callTool(
-          'create_shared_instruction',
-          args
-        );
-
-        expect(result.isError).toBe(true);
-      });
+      // Verify all operations were logged
+      expect(mockLogger.info).toHaveBeenCalledTimes(5); // init + register + execute (2 calls) + unregister
     });
 
-    describe('list_shared_instructions', () => {
-      it('should list shared instructions successfully', async () => {
-        const instruction2 = { ...mockSharedInstruction, name: 'python-guide' };
-        vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([
-          mockSharedInstruction,
-          instruction2,
-        ]);
+    it('should provide detailed error context for debugging', async () => {
+      const complexArgs = {
+        name: 'test-workspace',
+        options: { template: 'react', description: 'A test project' },
+        metadata: { tags: ['frontend', 'react'], priority: 'high' },
+      };
 
-        const result = await toolService.callTool(
-          'list_shared_instructions',
-          {}
-        );
+      vi.mocked(mockToolRegistry.execute).mockRejectedValue(new Error('Complex execution error'));
 
-        expect(result.content[0]?.text).toContain(
-          'Available shared instructions (2)'
-        );
-        expect(result.content[0]?.text).toContain('react-guide');
-        expect(result.content[0]?.text).toContain('python-guide');
-      });
+      const result = await toolService.callTool('create_workspace', complexArgs, mockContext);
 
-      it('should handle empty instructions list', async () => {
-        vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([]);
-
-        const result = await toolService.callTool(
-          'list_shared_instructions',
-          {}
-        );
-
-        expect(result.content[0]?.text).toBe('No shared instructions found');
-      });
-
-      it('should include instruction descriptions', async () => {
-        vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([
-          mockSharedInstruction,
-        ]);
-
-        const result = await toolService.callTool(
-          'list_shared_instructions',
-          {}
-        );
-
-        expect(result.content[0]?.text).toContain('React development guide');
-      });
-
-      it('should handle instructions without descriptions', async () => {
-        const instructionWithoutDescription = {
-          ...mockSharedInstruction,
-          description: undefined,
-        };
-        vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([
-          instructionWithoutDescription,
-        ]);
-
-        const result = await toolService.callTool(
-          'list_shared_instructions',
-          {}
-        );
-
-        expect(result.content[0]?.text).toContain('react-guide');
-        // Should not have description colon after instruction name
-        expect(result.content[0]?.text).toContain('- react-guide');
-        expect(result.content[0]?.text).not.toContain('react-guide:');
-      });
-
-      it('should handle repository errors', async () => {
-        vi.mocked(mockInstructionsRepository.listShared).mockRejectedValue(
-          new Error('File system error')
-        );
-
-        const result = await toolService.callTool(
-          'list_shared_instructions',
-          {}
-        );
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('File system error');
-      });
-    });
-
-    describe('update_global_instructions', () => {
-      it('should update global instructions with required arguments', async () => {
-        const args = {
-          content: '# Global Instructions\n\nThese apply everywhere.',
-        };
-        vi.mocked(mockInstructionsRepository.updateGlobal).mockResolvedValue();
-
-        const result = await toolService.callTool(
-          'update_global_instructions',
-          args
-        );
-
-        expect(mockInstructionsRepository.updateGlobal).toHaveBeenCalledWith({
-          content: '# Global Instructions\n\nThese apply everywhere.',
-          variables: {},
-        });
-        expect(result.content[0]?.text).toBe(
-          'Global instructions updated successfully'
-        );
-      });
-
-      it('should update global instructions with variables', async () => {
-        const args = {
-          content: '# Global Instructions\n\nProject: {{project}}',
-          variables: { project: 'My Project' },
-        };
-        vi.mocked(mockInstructionsRepository.updateGlobal).mockResolvedValue();
-
-        const result = await toolService.callTool(
-          'update_global_instructions',
-          args
-        );
-
-        expect(mockInstructionsRepository.updateGlobal).toHaveBeenCalledWith({
-          content: '# Global Instructions\n\nProject: {{project}}',
-          variables: { project: 'My Project' },
-        });
-        expect(result.content[0]?.text).toBe(
-          'Global instructions updated successfully'
-        );
-      });
-
-      it('should handle update errors', async () => {
-        const args = {
-          content: '# Global Instructions',
-        };
-        vi.mocked(mockInstructionsRepository.updateGlobal).mockRejectedValue(
-          new Error('Permission denied')
-        );
-
-        const result = await toolService.callTool(
-          'update_global_instructions',
-          args
-        );
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('Permission denied');
-      });
-
-      it('should validate required content', async () => {
-        const args = {}; // Missing content
-
-        const result = await toolService.callTool(
-          'update_global_instructions',
-          args
-        );
-
-        expect(result.isError).toBe(true);
-      });
-
-      it('should validate empty content', async () => {
-        const args = { content: '' }; // Empty content
-
-        const result = await toolService.callTool(
-          'update_global_instructions',
-          args
-        );
-
-        expect(result.isError).toBe(true);
-      });
-    });
-
-    describe('unknown tools', () => {
-      it('should handle unknown tool names', async () => {
-        const result = await toolService.callTool('unknown_tool', {});
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('Unknown tool: unknown_tool');
-      });
-    });
-
-    describe('error handling', () => {
-      it('should handle non-Error exceptions', async () => {
-        vi.mocked(mockWorkspaceRepository.create).mockRejectedValue(
-          'String error'
-        );
-
-        const result = await toolService.callTool('create_workspace', {
-          name: 'test',
-        });
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('String error');
-      });
-
-      it('should handle null/undefined exceptions', async () => {
-        vi.mocked(mockWorkspaceRepository.create).mockRejectedValue(null);
-
-        const result = await toolService.callTool('create_workspace', {
-          name: 'test',
-        });
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('null');
-      });
-
-      it('should handle object exceptions', async () => {
-        vi.mocked(mockWorkspaceRepository.create).mockRejectedValue({
-          code: 500,
-          message: 'Server error',
-        });
-
-        const result = await toolService.callTool('create_workspace', {
-          name: 'test',
-        });
-
-        expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('[object Object]');
-      });
-    });
-
-    describe('schema validation edge cases', () => {
-      it('should handle invalid argument types for create_workspace', async () => {
-        const args = { name: 123 }; // Invalid type
-
-        const result = await toolService.callTool('create_workspace', args);
-
-        expect(result.isError).toBe(true);
-      });
-
-      it('should handle null arguments', async () => {
-        const result = await toolService.callTool('create_workspace', null);
-
-        expect(result.isError).toBe(true);
-      });
-
-      it('should handle undefined arguments', async () => {
-        const result = await toolService.callTool(
-          'create_workspace',
-          undefined
-        );
-
-        expect(result.isError).toBe(true);
-      });
-
-      it('should accept valid empty object for list operations', async () => {
-        vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([]);
-
-        const result = await toolService.callTool('list_workspaces', {});
-
-        expect(result.isError).toBeUndefined();
-        expect(result.content[0]?.text).toBe('No workspaces found');
-      });
+      expect(result.success).toBe(false);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Unexpected error executing tool: create_workspace',
+        {
+          error: expect.any(Error),
+          args: complexArgs,
+        }
+      );
     });
   });
 });

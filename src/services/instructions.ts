@@ -14,6 +14,7 @@ import type {
   SharedInstruction,
 } from '../types/index.js';
 import { SharedInstructionNotFoundError } from '../utils/errors.js';
+import { isErr, isOk } from '../utils/result.js';
 import {
   validateFileContent,
   validateInstructionName,
@@ -60,25 +61,36 @@ export class InstructionsService {
   }
 
   async getGlobalInstructions(): Promise<GlobalInstructions> {
-    if (!(await this.fs.fileExists(this.globalInstructionsPath))) {
+    const fileExistsResult = await this.fs.fileExists(this.globalInstructionsPath);
+    if (isErr(fileExistsResult) || !fileExistsResult.data) {
       await this.updateGlobalInstructions(DEFAULT_GLOBAL_INSTRUCTIONS);
     }
 
     const content = await this.fs.readFile(this.globalInstructionsPath);
-    const stats = await this.fs.getFileStats(this.globalInstructionsPath);
+    const statsResult = await this.fs.getFileStats(this.globalInstructionsPath);
+    
+    if (isErr(statsResult)) {
+      throw new Error(`Failed to get file stats for global instructions: ${statsResult.error.message}`);
+    }
 
     return {
       content,
-      lastModified: stats.mtime,
+      lastModified: statsResult.data.mtime,
     };
   }
 
   async listSharedInstructions(): Promise<SharedInstruction[]> {
-    if (!(await this.fs.directoryExists(this.sharedInstructionsPath))) {
+    const existsResult = await this.fs.directoryExists(this.sharedInstructionsPath);
+    if (isErr(existsResult) || !existsResult.data) {
       return [];
     }
 
-    const files = await this.fs.listFiles(this.sharedInstructionsPath);
+    const filesResult = await this.fs.listFiles(this.sharedInstructionsPath);
+    if (isErr(filesResult)) {
+      return [];
+    }
+
+    const files = filesResult.data;
     const instructions: SharedInstruction[] = [];
 
     for (const file of files) {
@@ -104,19 +116,24 @@ export class InstructionsService {
 
     const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
-    if (!(await this.fs.fileExists(filePath))) {
+    const fileExistsResult = await this.fs.fileExists(filePath);
+    if (isErr(fileExistsResult) || !fileExistsResult.data) {
       throw new SharedInstructionNotFoundError(name);
     }
 
     const content = await this.fs.readFile(filePath);
-    const stats = await this.fs.getFileStats(filePath);
+    const statsResult = await this.fs.getFileStats(filePath);
+    
+    if (isErr(statsResult)) {
+      throw new Error(`Failed to get file stats for ${name}: ${statsResult.error.message}`);
+    }
 
     return {
       name,
       path: filePath,
       content,
-      createdAt: stats.ctime,
-      updatedAt: stats.mtime,
+      createdAt: statsResult.data.ctime,
+      updatedAt: statsResult.data.mtime,
     };
   }
 
@@ -125,7 +142,8 @@ export class InstructionsService {
 
     const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
-    if (!(await this.fs.fileExists(filePath))) {
+    const fileExistsResult = await this.fs.fileExists(filePath);
+    if (isErr(fileExistsResult) || !fileExistsResult.data) {
       throw new SharedInstructionNotFoundError(name);
     }
 
@@ -138,7 +156,8 @@ export class InstructionsService {
 
     const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
-    if (!(await this.fs.fileExists(filePath))) {
+    const fileExistsResult = await this.fs.fileExists(filePath);
+    if (isErr(fileExistsResult) || !fileExistsResult.data) {
       throw new SharedInstructionNotFoundError(name);
     }
 

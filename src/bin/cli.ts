@@ -11,6 +11,8 @@ import {
   NodeFileSystemProvider,
 } from '../layers/data/index.js';
 import { ToolService } from '../layers/services/index.js';
+import { ToolRegistry } from '../tools/registry.js';
+import { createChildLogger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,6 +29,7 @@ async function main(): Promise<void> {
       fileSystemProvider,
       workspacesRoot
     );
+    // Repository setup (currently not used in the new ToolService but kept for future compatibility)
     const sharedInstructionsPath = join(workspacesRoot, '.shared');
     const globalInstructionsPath = join(workspacesRoot, '.global');
     const instructionsRepository = new FileSystemInstructionsRepository(
@@ -36,10 +39,9 @@ async function main(): Promise<void> {
     );
 
     // Initialize services layer
-    const toolService = new ToolService({
-      workspaceRepository,
-      instructionsRepository,
-    });
+    const toolRegistry = new ToolRegistry();
+    const logger = createChildLogger('cli');
+    const toolService = new ToolService(toolRegistry, logger);
 
     // Initialize CLI runner
     const verbose =

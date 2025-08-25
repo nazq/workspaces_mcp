@@ -97,13 +97,37 @@ const createMockFileSystemService = (): FileSystemService => ({
         return { success: true, data: [] };
       }
     }),
-  getFileStats: vi.fn().mockImplementation(async (path: string) => ({
-    success: true,
-    data: await fs.stat(path),
-  })),
+  getFileStats: vi.fn().mockImplementation(async (path: string) => {
+    const stat = await fs.stat(path);
+    return {
+      success: true,
+      data: {
+        size: stat.size,
+        createdAt: stat.birthtime,
+        updatedAt: stat.mtime,
+        isDirectory: stat.isDirectory(),
+      },
+    };
+  }),
   deleteDirectory: vi.fn().mockImplementation(async (path: string) => {
     await fs.remove(path);
     return { success: true, data: undefined };
+  }),
+  listDirectories: vi.fn().mockImplementation(async (path: string) => {
+    try {
+      const items = await fs.readdir(path);
+      const directories = [];
+      for (const item of items) {
+        const itemPath = `${path}/${item}`;
+        const stat = await fs.stat(itemPath);
+        if (stat.isDirectory()) {
+          directories.push(item);
+        }
+      }
+      return { success: true, data: directories };
+    } catch (error) {
+      return { success: true, data: [] };
+    }
   }),
   fileExists: vi.fn().mockImplementation(async (path: string) => ({
     success: true,
@@ -303,6 +327,343 @@ describe('WorkspaceService', () => {
       expect(isErr(result)).toBe(true);
       if (isErr(result)) {
         expect(result.error).toBeInstanceOf(WorkspaceNotFoundError);
+      }
+    });
+
+    it('should handle file system errors during deletion', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      // Mock deletion to fail
+      vi.mocked(mockFs.deleteDirectory).mockResolvedValueOnce({
+        success: false,
+        error: new Error('Permission denied'),
+      });
+
+      const result = await workspaceService.deleteWorkspace('test-workspace');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Failed to delete workspace directory');
+      }
+    });
+
+    it('should handle event emission errors gracefully', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      // Mock event bus to fail
+      vi.mocked(mockEventBus.emit).mockRejectedValueOnce(new Error('Event bus down'));
+
+      const result = await workspaceService.deleteWorkspace('test-workspace');
+      expect(isOk(result)).toBe(true); // Should still succeed even if event fails
+      
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to emit workspace deleted event',
+        expect.objectContaining({
+          name: 'test-workspace',
+          error: expect.any(Error),
+        })
+      );
+    });
+
+    it('should handle unexpected errors', async () => {
+      // Mock unexpected error by making filesystem check throw
+      vi.mocked(mockFs.directoryExists).mockRejectedValueOnce(new Error('Unexpected error'));
+
+      const result = await workspaceService.deleteWorkspace('test-workspace');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Workspace deletion failed');
+      }
+    });
+  });
+
+  describe('validateWorkspaceFile', () => {
+    it('should validate existing file in workspace', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      const result = await workspaceService.validateWorkspaceFile(
+        'test-workspace',
+        'README.md'
+      );
+      expect(isOk(result)).toBe(true);
+    });
+
+    it('should reject file outside workspace', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      const result = await workspaceService.validateWorkspaceFile(
+        'test-workspace',
+        '../../../etc/passwd'
+      );
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Security violation');
+      }
+    });
+
+    it('should reject non-existent file', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      // Mock file existence check to return false
+      vi.mocked(mockFs.fileExists).mockResolvedValueOnce({
+        success: true,
+        data: false,
+      });
+      
+      const result = await workspaceService.validateWorkspaceFile(
+        'test-workspace',
+        'non-existent.txt'
+      );
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('File does not exist');
+      }
+    });
+
+    it('should handle workspace not found', async () => {
+      const result = await workspaceService.validateWorkspaceFile(
+        'non-existent-workspace',
+        'README.md'
+      );
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error).toBeInstanceOf(WorkspaceNotFoundError);
+      }
+    });
+  });
+
+  describe('workspaceExists', () => {
+    it('should return true for existing workspace', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      const result = await workspaceService.workspaceExists('test-workspace');
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toBe(true);
+      }
+    });
+
+    it('should return false for non-existent workspace', async () => {
+      const result = await workspaceService.workspaceExists('non-existent');
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toBe(false);
+      }
+    });
+
+    it('should handle file system errors', async () => {
+      vi.mocked(mockFs.directoryExists).mockRejectedValueOnce(new Error('FS error'));
+      
+      const result = await workspaceService.workspaceExists('test-workspace');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Failed to check workspace existence');
+      }
+    });
+  });
+
+  describe('updateWorkspace', () => {
+    it('should update workspace description', async () => {
+      await workspaceService.createWorkspace('test-workspace', {
+        description: 'Original description',
+      });
+      
+      const result = await workspaceService.updateWorkspace('test-workspace', {
+        description: 'Updated description',
+      });
+      
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data.description).toBe('Updated description');
+        expect(result.data.updatedAt).toBeInstanceOf(Date);
+      }
+    });
+
+    it('should update workspace template', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      const result = await workspaceService.updateWorkspace('test-workspace', {
+        template: 'react-typescript',
+      });
+      
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data.template).toBe('react-typescript');
+      }
+    });
+
+    it('should handle workspace not found', async () => {
+      const result = await workspaceService.updateWorkspace('non-existent', {
+        description: 'New description',
+      });
+      
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error).toBeInstanceOf(WorkspaceNotFoundError);
+      }
+    });
+
+    it('should handle event emission errors gracefully', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      // Mock event bus to fail on the second call (workspace updated event)
+      vi.mocked(mockEventBus.emit)
+        .mockResolvedValueOnce(undefined) // workspace accessed event succeeds
+        .mockRejectedValueOnce(new Error('Event error')); // workspace updated event fails
+      
+      const result = await workspaceService.updateWorkspace('test-workspace', {
+        description: 'Updated description',
+      });
+      
+      expect(isOk(result)).toBe(true);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to emit workspace updated event',
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('getWorkspacePath', () => {
+    it('should return correct workspace path', async () => {
+      const result = await workspaceService.getWorkspacePath('test-workspace');
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toBe(path.join(tempDir, 'test-workspace'));
+      }
+    });
+
+    it('should validate workspace name', async () => {
+      const result = await workspaceService.getWorkspacePath('invalid name with spaces');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Invalid workspace name');
+      }
+    });
+  });
+
+  describe('addFileToWorkspace (deprecated)', () => {
+    it('should delegate to validateWorkspaceFile', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      await expect(
+        workspaceService.addFileToWorkspace('test-workspace', 'README.md')
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw error for invalid file', async () => {
+      await expect(
+        workspaceService.addFileToWorkspace('non-existent', 'README.md')
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle file system errors during creation', async () => {
+      vi.mocked(mockFs.directoryExists).mockResolvedValueOnce({
+        success: false,
+        error: new Error('FS error'),
+      });
+
+      const result = await workspaceService.createWorkspace('test-workspace');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Failed to check workspace existence');
+      }
+    });
+
+    it('should handle directory creation errors', async () => {
+      vi.mocked(mockFs.ensureDirectory).mockResolvedValueOnce({
+        success: false,
+        error: new Error('Permission denied'),
+      });
+
+      const result = await workspaceService.createWorkspace('test-workspace');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Failed to create workspace directory');
+      }
+    });
+
+    it('should handle README creation errors', async () => {
+      vi.mocked(mockFs.writeFile).mockResolvedValueOnce({
+        success: false,
+        error: new Error('Write error'),
+      });
+
+      const result = await workspaceService.createWorkspace('test-workspace');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Failed to create README');
+      }
+    });
+
+    it('should handle event emission errors gracefully during creation', async () => {
+      vi.mocked(mockEventBus.emit).mockRejectedValueOnce(new Error('Event error'));
+
+      const result = await workspaceService.createWorkspace('test-workspace');
+      expect(isOk(result)).toBe(true); // Should still succeed
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to emit workspace created event',
+        expect.objectContaining({
+          name: 'test-workspace',
+          error: expect.any(Error),
+        })
+      );
+    });
+
+    it('should handle errors when listing workspace files', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      vi.mocked(mockFs.listFiles).mockResolvedValueOnce({
+        success: false,
+        error: new Error('List files error'),
+      });
+
+      const result = await workspaceService.getWorkspaceInfo('test-workspace');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Failed to list workspace files');
+      }
+    });
+
+    it('should handle errors when getting workspace stats', async () => {
+      await workspaceService.createWorkspace('test-workspace');
+      
+      vi.mocked(mockFs.getFileStats).mockResolvedValueOnce({
+        success: false,
+        error: new Error('Stats error'),
+      });
+
+      const result = await workspaceService.getWorkspaceInfo('test-workspace');
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Failed to get workspace stats');
+      }
+    });
+
+    it('should handle non-existent workspaces root during listing', async () => {
+      vi.mocked(mockFs.directoryExists).mockResolvedValueOnce({
+        success: true,
+        data: false,
+      });
+
+      const result = await workspaceService.listWorkspaces();
+      expect(isOk(result)).toBe(true);
+      if (isOk(result)) {
+        expect(result.data).toEqual([]);
+      }
+    });
+
+    it('should handle errors when listing directories', async () => {
+      vi.mocked(mockFs.listDirectories).mockResolvedValueOnce({
+        success: false,
+        error: new Error('List error'),
+      });
+
+      const result = await workspaceService.listWorkspaces();
+      expect(isErr(result)).toBe(true);
+      if (isErr(result)) {
+        expect(result.error.message).toContain('Failed to list workspace directory');
       }
     });
   });

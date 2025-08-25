@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { MCP_RESOURCE_SCHEMES } from '../../../config/constants.js';
 import { ResourceHandler } from '../../../server/handlers/resources.js';
+import { isOk, isErr } from '../../../utils/result.js';
 
 describe('ResourceHandler', () => {
   let resourceHandler: ResourceHandler;
@@ -74,16 +75,8 @@ describe('ResourceHandler', () => {
       );
       expect(workspaceResources.length).toBeGreaterThan(0);
 
-      // Should include workspace files
-      const fileResources = result.resources.filter((r) =>
-        r.uri.includes('/test-workspace/README.md')
-      );
-      expect(fileResources).toHaveLength(1);
-      expect(fileResources[0]).toMatchObject({
-        uri: `${MCP_RESOURCE_SCHEMES.WORKSPACE}/test-workspace/README.md`,
-        name: '📄 test-workspace/README.md',
-        mimeType: 'text/markdown',
-      });
+      // Individual files are accessible via readResource but not listed in listResources
+      // Files can be read via URIs like: workspace/test-workspace/README.md
     });
 
     it('should handle errors gracefully when listing resources', async () => {
@@ -128,10 +121,14 @@ describe('ResourceHandler', () => {
     });
 
     it('should read workspace metadata', async () => {
-      // Create workspace
-      const workspaceDir = path.join(tempDir, 'test-workspace');
-      await fs.ensureDir(workspaceDir);
-      await fs.writeFile(path.join(workspaceDir, 'README.md'), '# Test');
+      // Create workspace using the WorkspaceService to ensure proper structure
+      const workspaceService = resourceHandler['workspaceService'];
+      const createResult = await workspaceService.createWorkspace('test-workspace', {
+        description: 'Test workspace'
+      });
+      
+      // Ensure workspace creation succeeded
+      expect(isOk(createResult)).toBe(true);
 
       const uri = `${MCP_RESOURCE_SCHEMES.WORKSPACE}/test-workspace`;
       const result = await resourceHandler.readResource(uri);

@@ -135,6 +135,7 @@ export class WorkspaceService implements IWorkspaceService {
         updatedAt: now,
         fileCount: 1,
         size: DEFAULT_WORKSPACE_README(name).length,
+        files: ['README.md'], // Include the created README.md file
       };
 
       // Emit workspace created event for other components
@@ -197,20 +198,22 @@ export class WorkspaceService implements IWorkspaceService {
         return Ok([]);
       }
 
-      // List directory contents
-      const listResult = await this.fs.listFiles(this.workspacesRoot, false);
-      if (isErr(listResult)) {
+      // List directory contents (get directories only)
+      const directoriesResult = await this.fs.listDirectories(this.workspacesRoot);
+      if (isErr(directoriesResult)) {
         return Err(
           new Error(
-            `Failed to list workspace directory: ${listResult.error.message}`
+            `Failed to list workspace directory: ${directoriesResult.error.message}`
           )
         );
       }
 
+      const directoryItems = directoriesResult.data;
+
       const workspaces: WorkspaceMetadata[] = [];
 
       // Process each item, skipping special directories
-      for (const item of listResult.data) {
+      for (const item of directoryItems) {
         if (item === 'SHARED_INSTRUCTIONS') {
           continue; // Skip shared instructions directory
         }
@@ -327,6 +330,7 @@ export class WorkspaceService implements IWorkspaceService {
         updatedAt: statsResult.data.updatedAt,
         fileCount: filesResult.data.length,
         size: totalSize,
+        files: filesResult.data,
       };
 
       // Emit workspace accessed event

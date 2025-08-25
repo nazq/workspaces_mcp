@@ -20,6 +20,7 @@ export interface WorkspaceMetadata {
   updatedAt: Date;
   fileCount?: number;
   size?: number;
+  files?: string[];
 }
 
 export interface SharedInstruction {
@@ -163,6 +164,7 @@ export interface FileSystemService {
   fileExists(path: string): Promise<Result<boolean>>;
   directoryExists(path: string): Promise<Result<boolean>>;
   listFiles(path: string, recursive?: boolean): Promise<Result<string[]>>;
+  listDirectories(path: string): Promise<Result<string[]>>;
   deleteFile(path: string): Promise<Result<void>>;
   deleteDirectory(path: string): Promise<Result<void>>;
   getFileStats(path: string): Promise<

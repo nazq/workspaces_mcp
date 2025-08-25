@@ -12,21 +12,23 @@ import { FileSystemService as NodeFileSystemService } from '../../services/files
 import { InstructionsService } from '../../services/instructions.js';
 import { WorkspaceService } from '../../services/workspace.js';
 import { createChildLogger } from '../../utils/logger.js';
+import { isErr, isOk } from '../../utils/result.js';
 
 export class ResourceHandler {
   private instructionsService: InstructionsService;
   private workspaceService: WorkspaceService;
+  private fs: FileSystemService;
 
   constructor(workspacesRoot?: string) {
     const root = workspacesRoot ?? getDefaultWorkspacesRoot();
     
     // Create required dependencies
-    const fs: FileSystemService = new NodeFileSystemService();
+    this.fs = new NodeFileSystemService();
     const eventBus: EventBus = new AsyncEventBus();
     const logger: Logger = createChildLogger('ResourceHandler');
     
     this.instructionsService = new InstructionsService(root);
-    this.workspaceService = new WorkspaceService(root, fs, eventBus, logger);
+    this.workspaceService = new WorkspaceService(root, this.fs, eventBus, logger);
   }
 
   async listResources(): Promise<ListResourcesResult> {
@@ -82,9 +84,14 @@ export class ResourceHandler {
 
   private async addWorkspaceResources(resources: Resource[]): Promise<void> {
     try {
-      const workspaces = await this.workspaceService.listWorkspaces();
+      const workspacesResult = await this.workspaceService.listWorkspaces();
 
-      for (const workspace of workspaces) {
+      if (isErr(workspacesResult)) {
+        // Ignore errors when listing workspaces
+        return;
+      }
+
+      for (const workspace of workspacesResult.data) {
         resources.push({
           uri: `${MCP_RESOURCE_SCHEMES.WORKSPACE}/${workspace.name}`,
           name: `📁 ${workspace.name}`,
@@ -92,18 +99,8 @@ export class ResourceHandler {
           mimeType: 'application/json',
         });
 
-        // Add individual files from the workspace
-        for (const file of workspace.files.slice(0, 10)) {
-          // Limit to 10 files
-          if (file.endsWith('.md') || file.endsWith('.txt')) {
-            resources.push({
-              uri: `${MCP_RESOURCE_SCHEMES.WORKSPACE}/${workspace.name}/${file}`,
-              name: `📄 ${workspace.name}/${file}`,
-              description: `File from ${workspace.name} workspace`,
-              mimeType: file.endsWith('.md') ? 'text/markdown' : 'text/plain',
-            });
-          }
-        }
+        // Note: Individual file resources are available through workspace metadata
+        // Files can be accessed via workspace/{name}/{filename} URIs when reading resources
       }
     } catch {
       // Ignore errors when listing workspaces
@@ -155,15 +152,41 @@ export class ResourceHandler {
     }
 
     if (parts.length === 1) {
-      // Return workspace metadata
-      const workspace =
+      // Return workspace metadata with file list
+      const workspaceResult =
         await this.workspaceService.getWorkspaceInfo(workspaceName);
+      
+      if (isErr(workspaceResult)) {
+        const message = workspaceResult.error?.message ?? 'Unknown error';
+        throw new Error(`Failed to get workspace info: ${message}`);
+      }
+
+      // Get file list from workspace directory
+      let files: string[] = [];
+      try {
+        const workspacePathResult = await this.workspaceService.getWorkspacePath(workspaceName);
+        if (isOk(workspacePathResult)) {
+          const filesResult = await this.fs.listFiles(workspacePathResult.data, false);
+          if (isOk(filesResult)) {
+            files = filesResult.data;
+          }
+        }
+      } catch {
+        // Ignore errors when listing files
+      }
+
+      // Add files to workspace metadata for resource response
+      const workspaceMetadata = {
+        ...workspaceResult.data,
+        files: files
+      };
+      
       return {
         contents: [
           {
             uri: `${MCP_RESOURCE_SCHEMES.WORKSPACE}/${workspaceName}`,
             mimeType: 'application/json',
-            text: JSON.stringify(workspace, null, 2),
+            text: JSON.stringify(workspaceMetadata, null, 2),
           },
         ],
       };
@@ -171,9 +194,15 @@ export class ResourceHandler {
 
     // Return file content
     const relativePath = parts.slice(1).join('/');
-    const workspacePath =
+    const workspacePathResult =
       await this.workspaceService.getWorkspacePath(workspaceName);
-    const filePath = `${workspacePath}/${relativePath}`;
+    
+    if (isErr(workspacePathResult)) {
+      const message = workspacePathResult.error?.message ?? 'Unknown error';
+      throw new Error(`Failed to get workspace path: ${message}`);
+    }
+    
+    const filePath = `${workspacePathResult.data}/${relativePath}`;
 
     // Basic security check
     if (relativePath.includes('..') || relativePath.startsWith('/')) {

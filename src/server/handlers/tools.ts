@@ -6,12 +6,17 @@ import type {
 import { z } from 'zod';
 
 import { getDefaultWorkspacesRoot } from '../../config/paths.js';
+import { AsyncEventBus } from '../../events/event-bus.js';
+import type { EventBus, FileSystemService, Logger } from '../../interfaces/services.js';
+import { FileSystemService as NodeFileSystemService } from '../../services/filesystem.js';
 import { InstructionsService } from '../../services/instructions.js';
 import { WorkspaceService } from '../../services/workspace.js';
 import type {
   InstructionCreateOptions,
   WorkspaceCreateOptions,
 } from '../../types/index.js';
+import { createChildLogger } from '../../utils/logger.js';
+import { isErr, isOk } from '../../utils/result.js';
 
 export class ToolHandler {
   private instructionsService: InstructionsService;
@@ -19,8 +24,14 @@ export class ToolHandler {
 
   constructor(workspacesRoot?: string) {
     const root = workspacesRoot ?? getDefaultWorkspacesRoot();
+    
+    // Create required dependencies
+    const fs: FileSystemService = new NodeFileSystemService();
+    const eventBus: EventBus = new AsyncEventBus();
+    const logger: Logger = createChildLogger('ToolHandler');
+    
     this.instructionsService = new InstructionsService(root);
-    this.workspaceService = new WorkspaceService(root);
+    this.workspaceService = new WorkspaceService(root, fs, eventBus, logger);
   }
 
   async listTools(): Promise<ListToolsResult> {
@@ -155,24 +166,49 @@ export class ToolHandler {
       options.description = parsed.description;
     if (parsed.template !== undefined) options.template = parsed.template;
 
-    const workspace = await this.workspaceService.createWorkspace(
+    const workspaceResult = await this.workspaceService.createWorkspace(
       parsed.name,
       options
     );
+
+    if (isErr(workspaceResult)) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ Failed to create workspace "${parsed.name}": ${workspaceResult.error.message}`,
+          },
+        ],
+        isError: true,
+      };
+    }
 
     return {
       content: [
         {
           type: 'text',
-          text: `✅ Created workspace "${parsed.name}" successfully!\n\nWorkspace details:\n${JSON.stringify(workspace, null, 2)}`,
+          text: `✅ Created workspace "${parsed.name}" successfully!\n\nWorkspace details:\n${JSON.stringify(workspaceResult.data, null, 2)}`,
         },
       ],
     };
   }
 
   private async listWorkspaces(): Promise<CallToolResult> {
-    const workspaces = await this.workspaceService.listWorkspaces();
+    const workspacesResult = await this.workspaceService.listWorkspaces();
 
+    if (isErr(workspacesResult)) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ Failed to list workspaces: ${workspacesResult.error.message}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const workspaces = workspacesResult.data;
     if (workspaces.length === 0) {
       return {
         content: [
@@ -187,7 +223,7 @@ export class ToolHandler {
     const workspaceList = workspaces
       .map(
         (ws) =>
-          `📁 **${ws.name}** - ${ws.files.length} files${ws.description !== undefined ? ` - ${ws.description}` : ''}`
+          `📁 **${ws.name}** - ${ws.fileCount ?? 0} files${ws.description !== undefined ? ` - ${ws.description}` : ''}`
       )
       .join('\n');
 
@@ -207,8 +243,21 @@ export class ToolHandler {
     });
 
     const { name } = schema.parse(args);
-    const workspace = await this.workspaceService.getWorkspaceInfo(name);
+    const workspaceResult = await this.workspaceService.getWorkspaceInfo(name);
 
+    if (isErr(workspaceResult)) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `❌ Failed to get workspace info: ${workspaceResult.error?.message ?? 'Unknown error'}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const workspace = workspaceResult.data;
     return {
       content: [
         {
