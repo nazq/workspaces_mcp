@@ -14,7 +14,7 @@ import type {
   SharedInstruction,
 } from '../types/index.js';
 import { SharedInstructionNotFoundError } from '../utils/errors.js';
-import { isErr, isOk } from '../utils/result.js';
+import { isErr } from '../utils/result.js';
 import {
   validateFileContent,
   validateInstructionName,

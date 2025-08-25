@@ -8,7 +8,7 @@ import { MCP_RESOURCE_SCHEMES } from '../../config/constants.js';
 import { getDefaultWorkspacesRoot } from '../../config/paths.js';
 import { AsyncEventBus } from '../../events/event-bus.js';
 import type { EventBus, FileSystemService, Logger } from '../../interfaces/services.js';
-import { FileSystemService as NodeFileSystemService } from '../../services/filesystem.js';
+import { NodeFileSystemProvider } from '../../layers/data/filesystem/node-provider.js';
 import { InstructionsService } from '../../services/instructions.js';
 import { WorkspaceService } from '../../services/workspace.js';
 import { createChildLogger } from '../../utils/logger.js';
@@ -23,7 +23,7 @@ export class ResourceHandler {
     const root = workspacesRoot ?? getDefaultWorkspacesRoot();
     
     // Create required dependencies
-    this.fs = new NodeFileSystemService();
+    this.fs = new NodeFileSystemProvider();
     const eventBus: EventBus = new AsyncEventBus();
     const logger: Logger = createChildLogger('ResourceHandler');
     

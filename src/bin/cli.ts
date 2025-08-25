@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 
 import { CliRunner } from '../layers/cli/index.js';
 import {
-  FileSystemInstructionsRepository,
   FileSystemWorkspaceRepository,
   NodeFileSystemProvider,
 } from '../layers/data/index.js';
@@ -29,14 +28,7 @@ async function main(): Promise<void> {
       fileSystemProvider,
       workspacesRoot
     );
-    // Repository setup (currently not used in the new ToolService but kept for future compatibility)
-    const sharedInstructionsPath = join(workspacesRoot, '.shared');
-    const globalInstructionsPath = join(workspacesRoot, '.global');
-    const instructionsRepository = new FileSystemInstructionsRepository(
-      fileSystemProvider,
-      sharedInstructionsPath,
-      globalInstructionsPath
-    );
+    // Repository setup for future compatibility
 
     // Initialize services layer
     const toolRegistry = new ToolRegistry();

@@ -11,6 +11,7 @@ import type {
   Logger,
   ToolContext,
   ToolRegistry,
+  ToolHandler,
 } from '../../interfaces/services.js';
 import { CreateWorkspaceTool } from '../../tools/handlers/create-workspace-tool.js';
 import type { Result } from '../../utils/result.js';
