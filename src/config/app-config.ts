@@ -1,4 +1,4 @@
-// Professional Configuration Management with Zod Validation
+// Configuration Management with Zod Validation
 // Single source of truth for all application configuration
 
 import * as os from 'node:os';
@@ -85,7 +85,7 @@ export type AppConfig = z.infer<typeof AppConfigSchema>;
 
 // Environment-aware configuration factory
 export const createEnvironmentConfig = (): Partial<AppConfig> => {
-  const config: Record<string, any> = {};
+  const config: Record<string, unknown> = {};
 
   // Only set environment variables and computed defaults - let schema handle the rest
   if (process.env.WORKSPACES_ROOT || process.env.MAX_WORKSPACES) {
@@ -133,10 +133,14 @@ export const createEnvironmentConfig = (): Partial<AppConfig> => {
     };
   }
 
-  if (process.env.NODE_ENV || process.env.VERBOSE || process.env.MOCK_FS) {
+  if (
+    process.env.WORKSPACES_DEBUG ||
+    process.env.VERBOSE ||
+    process.env.MOCK_FS
+  ) {
     config.development = {
-      ...(process.env.NODE_ENV && {
-        enableDebugMode: process.env.NODE_ENV === 'development',
+      ...(process.env.WORKSPACES_DEBUG && {
+        enableDebugMode: process.env.WORKSPACES_DEBUG === 'true',
       }),
       ...(process.env.VERBOSE && {
         enableVerboseLogging: process.env.VERBOSE === 'true',

@@ -516,7 +516,7 @@ describe('AppConfig System', () => {
       delete process.env.HTTP_PORT;
       delete process.env.HTTP_HOST;
       delete process.env.WORKSPACES_LOG_LEVEL;
-      delete process.env.NODE_ENV;
+      delete process.env.WORKSPACES_DEBUG;
       delete process.env.VERBOSE;
       delete process.env.MOCK_FS;
 
@@ -540,7 +540,7 @@ describe('AppConfig System', () => {
       process.env.HTTP_PORT = '3000';
       process.env.HTTP_HOST = 'example.com';
       process.env.WORKSPACES_LOG_LEVEL = 'debug';
-      process.env.NODE_ENV = 'development';
+      process.env.WORKSPACES_DEBUG = 'true';
       process.env.VERBOSE = 'true';
       process.env.MOCK_FS = 'true';
 

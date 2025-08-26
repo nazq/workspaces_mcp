@@ -4,29 +4,37 @@ import type {
   EventBus,
   Logger,
   ToolContext,
-  WorkspaceRepository,
+  WorkspaceService,
 } from '../../../interfaces/services.js';
 import { CreateWorkspaceTool } from '../../../tools/handlers/create-workspace-tool.js';
-import { Ok, Err } from '../../../utils/result.js';
+import { Err, Ok } from '../../../utils/result.js';
 
-// Mock workspace repository
-const createMockWorkspaceRepository = (): WorkspaceRepository => ({
-  create: vi.fn().mockResolvedValue(Ok(undefined)),
-  list: vi.fn().mockResolvedValue(Ok([])),
-  exists: vi.fn().mockResolvedValue(Ok(false)),
-  getMetadata: vi.fn().mockResolvedValue(Ok({
-    name: 'test-workspace',
-    path: '/test/path',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  })),
-  delete: vi.fn().mockResolvedValue(Ok(undefined)),
-  update: vi.fn().mockResolvedValue(Ok(undefined)),
+// Mock workspace service
+const createMockWorkspaceService = (): WorkspaceService => ({
+  createWorkspace: vi.fn().mockResolvedValue(
+    Ok({
+      name: 'test-workspace',
+      path: '/test/path',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+  ),
+  listWorkspaces: vi.fn().mockResolvedValue(Ok([])),
+  workspaceExists: vi.fn().mockResolvedValue(Ok(false)),
+  getWorkspaceInfo: vi.fn().mockResolvedValue(
+    Ok({
+      name: 'test-workspace',
+      path: '/test/path',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+  ),
+  deleteWorkspace: vi.fn().mockResolvedValue(Ok(undefined)),
 });
 
 // Mock tool context
 const createMockContext = (): ToolContext => ({
-  workspaceRepository: createMockWorkspaceRepository(),
+  workspaceRepository: createMockWorkspaceService(),
   instructionsRepository: {} as any,
   config: {
     workspaces: {
@@ -68,7 +76,7 @@ describe('CreateWorkspaceTool', () => {
 
     it('should have input schema for validation', () => {
       expect(tool.inputSchema).toBeDefined();
-      
+
       // Test valid input
       const validInput = {
         name: 'test-workspace',
@@ -97,10 +105,10 @@ describe('CreateWorkspaceTool', () => {
 
     it('should reject invalid workspace names', () => {
       const invalidNames = [
-        '',              // Empty
+        '', // Empty
         'a'.repeat(101), // Too long
         'name with spaces', // Spaces
-        'name@invalid',  // Special characters
+        'name@invalid', // Special characters
         '-starts-with-hyphen',
         'ends-with-hyphen-',
         'name.with.dots',
@@ -156,18 +164,17 @@ describe('CreateWorkspaceTool', () => {
   describe('Tool Execution', () => {
     it('should create workspace successfully with minimal arguments', async () => {
       const args = { name: 'test-workspace' };
-      
+
       const result = await tool.execute(args, mockContext);
-      
+
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.content[0]?.text).toContain('created successfully');
+        expect(result.value.content[0]?.text).toContain('created successfully');
       }
 
-      expect(mockContext.workspaceRepository.create).toHaveBeenCalledWith(
-        'test-workspace',
-        expect.any(Object)
-      );
+      expect(
+        mockContext.workspaceRepository.createWorkspace
+      ).toHaveBeenCalledWith('test-workspace', expect.any(Object));
     });
 
     it('should create workspace with description and template', async () => {
@@ -176,11 +183,13 @@ describe('CreateWorkspaceTool', () => {
         description: 'A complete workspace',
         template: 'react',
       };
-      
+
       const result = await tool.execute(args, mockContext);
-      
+
       expect(result.success).toBe(true);
-      expect(mockContext.workspaceRepository.create).toHaveBeenCalledWith(
+      expect(
+        mockContext.workspaceRepository.createWorkspace
+      ).toHaveBeenCalledWith(
         'full-workspace',
         expect.objectContaining({
           description: 'A complete workspace',
@@ -190,15 +199,15 @@ describe('CreateWorkspaceTool', () => {
     });
 
     it('should handle workspace already exists error', async () => {
-      vi.mocked(mockContext.workspaceRepository.create).mockResolvedValue(
-        Err(new Error('Workspace already exists'))
-      );
-      
+      vi.mocked(
+        mockContext.workspaceRepository.createWorkspace
+      ).mockResolvedValue(Err(new Error('Workspace already exists')));
+
       const result = await tool.execute(
         { name: 'existing-workspace' },
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.message).toContain('Workspace already exists');
@@ -206,15 +215,15 @@ describe('CreateWorkspaceTool', () => {
     });
 
     it('should handle repository errors', async () => {
-      vi.mocked(mockContext.workspaceRepository.create).mockResolvedValue(
-        Err(new Error('Repository error'))
-      );
-      
+      vi.mocked(
+        mockContext.workspaceRepository.createWorkspace
+      ).mockResolvedValue(Err(new Error('Repository error')));
+
       const result = await tool.execute(
         { name: 'error-workspace' },
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.message).toContain('Repository error');
@@ -223,7 +232,7 @@ describe('CreateWorkspaceTool', () => {
 
     it('should emit workspace created event', async () => {
       await tool.execute({ name: 'event-workspace' }, mockContext);
-      
+
       expect(mockContext.eventBus.emit).toHaveBeenCalledWith(
         'workspace.created',
         expect.objectContaining({
@@ -233,11 +242,8 @@ describe('CreateWorkspaceTool', () => {
     });
 
     it('should log workspace creation', async () => {
-      await tool.execute(
-        { name: 'logged-workspace' },
-        mockContext
-      );
-      
+      await tool.execute({ name: 'logged-workspace' }, mockContext);
+
       expect(mockContext.logger.info).toHaveBeenCalledWith(
         'Creating workspace: logged-workspace',
         expect.objectContaining({
@@ -250,18 +256,20 @@ describe('CreateWorkspaceTool', () => {
 
   describe('Error Handling', () => {
     it('should handle unexpected repository exceptions', async () => {
-      vi.mocked(mockContext.workspaceRepository.create).mockRejectedValue(
-        new Error('Unexpected database error')
-      );
-      
+      vi.mocked(
+        mockContext.workspaceRepository.createWorkspace
+      ).mockRejectedValue(new Error('Unexpected database error'));
+
       const result = await tool.execute(
         { name: 'exception-workspace' },
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toContain('Unexpected error creating workspace');
+        expect(result.error.message).toContain(
+          'Unexpected error creating workspace'
+        );
       }
     });
 
@@ -269,27 +277,26 @@ describe('CreateWorkspaceTool', () => {
       vi.mocked(mockContext.eventBus.emit).mockRejectedValue(
         new Error('Event system down')
       );
-      
+
       // Workspace creation should fail if event emission fails (not handled gracefully)
       const result = await tool.execute(
         { name: 'event-error-workspace' },
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toContain('Unexpected error creating workspace');
+        expect(result.error.message).toContain(
+          'Unexpected error creating workspace'
+        );
       }
     });
 
     it('should validate workspace name length limits', async () => {
       // Should handle exactly at limit
       const maxLengthName = 'a'.repeat(100);
-      const result = await tool.execute(
-        { name: maxLengthName },
-        mockContext
-      );
-      
+      const result = await tool.execute({ name: maxLengthName }, mockContext);
+
       expect(result.success).toBe(true);
     });
 
@@ -305,13 +312,12 @@ describe('CreateWorkspaceTool', () => {
 
   describe('Template Support', () => {
     it('should create workspace without template', async () => {
-      const result = await tool.execute(
-        { name: 'no-template' },
-        mockContext
-      );
-      
+      const result = await tool.execute({ name: 'no-template' }, mockContext);
+
       expect(result.success).toBe(true);
-      expect(mockContext.workspaceRepository.create).toHaveBeenCalledWith(
+      expect(
+        mockContext.workspaceRepository.createWorkspace
+      ).toHaveBeenCalledWith(
         'no-template',
         expect.objectContaining({
           template: undefined,
@@ -324,9 +330,11 @@ describe('CreateWorkspaceTool', () => {
         { name: 'templated', template: 'python' },
         mockContext
       );
-      
+
       expect(result.success).toBe(true);
-      expect(mockContext.workspaceRepository.create).toHaveBeenCalledWith(
+      expect(
+        mockContext.workspaceRepository.createWorkspace
+      ).toHaveBeenCalledWith(
         'templated',
         expect.objectContaining({
           template: 'python',
@@ -342,16 +350,15 @@ describe('CreateWorkspaceTool', () => {
         description: 'Test workspace for metadata',
         template: 'basic',
       };
-      
+
       await tool.execute(args, mockContext);
-      
-      expect(mockContext.workspaceRepository.create).toHaveBeenCalledWith(
-        'metadata-test',
-        {
-          description: 'Test workspace for metadata',
-          template: 'basic',
-        }
-      );
+
+      expect(
+        mockContext.workspaceRepository.createWorkspace
+      ).toHaveBeenCalledWith('metadata-test', {
+        description: 'Test workspace for metadata',
+        template: 'basic',
+      });
     });
 
     it('should handle empty description correctly', async () => {
@@ -359,9 +366,11 @@ describe('CreateWorkspaceTool', () => {
         { name: 'empty-desc', description: '' },
         mockContext
       );
-      
+
       expect(result.success).toBe(true);
-      expect(mockContext.workspaceRepository.create).toHaveBeenCalledWith(
+      expect(
+        mockContext.workspaceRepository.createWorkspace
+      ).toHaveBeenCalledWith(
         'empty-desc',
         expect.objectContaining({
           description: '',
@@ -372,14 +381,11 @@ describe('CreateWorkspaceTool', () => {
 
   describe('Response Formatting', () => {
     it('should return properly formatted success response', async () => {
-      const result = await tool.execute(
-        { name: 'format-test' },
-        mockContext
-      );
-      
+      const result = await tool.execute({ name: 'format-test' }, mockContext);
+
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toMatchObject({
+        expect(result.value).toMatchObject({
           content: expect.arrayContaining([
             expect.objectContaining({
               type: 'text',
@@ -392,15 +398,12 @@ describe('CreateWorkspaceTool', () => {
     });
 
     it('should return properly formatted error response', async () => {
-      vi.mocked(mockContext.workspaceRepository.create).mockResolvedValue(
-        Err(new Error('Creation failed'))
-      );
-      
-      const result = await tool.execute(
-        { name: 'error-format' },
-        mockContext
-      );
-      
+      vi.mocked(
+        mockContext.workspaceRepository.createWorkspace
+      ).mockResolvedValue(Err(new Error('Creation failed')));
+
+      const result = await tool.execute({ name: 'error-format' }, mockContext);
+
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error).toBeInstanceOf(Error);

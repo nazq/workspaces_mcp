@@ -1,57 +1,138 @@
-// Professional MCP Server Logger - CRITICAL: STDIO Stream Separation
-// stdout: ONLY JSON-RPC messages
-// stderr: ALL logging, debug, and non-protocol output
+// High-Performance MCP Server Logger using Pino
+// Logs to WORKSPACE_ROOT/workspace_mcp.log for persistent storage
+// STDIO streams remain clean for MCP protocol communication
 
-const getLogLevel = (): string => {
-  return process.env.WORKSPACES_LOG_LEVEL?.toLowerCase() ?? 'info';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
+import pino from 'pino';
+
+import { getDefaultWorkspacesRoot } from '../config/paths.js';
+
+// Get log level from environment, default to 'info'
+const getLogLevel = (): pino.Level => {
+  const level = process.env.WORKSPACES_LOG_LEVEL?.toLowerCase() ?? 'info';
+  return ['trace', 'debug', 'info', 'warn', 'error', 'fatal'].includes(level)
+    ? (level as pino.Level)
+    : 'info';
 };
 
-const shouldLog = (level: string): boolean => {
-  const currentLevel = getLogLevel();
-  const levels = ['debug', 'info', 'warn', 'error', 'fatal'];
-  const currentIndex = levels.indexOf(currentLevel);
-  const messageIndex = levels.indexOf(level);
-  return messageIndex >= currentIndex;
-};
+// Get log file path in workspace root
+const getLogFilePath = (): string => {
+  const workspacesRoot =
+    process.env.WORKSPACES_ROOT ?? getDefaultWorkspacesRoot();
 
-const formatLogMessage = (
-  level: string,
-  name: string,
-  ...args: unknown[]
-): string => {
-  const timestamp = new Date().toISOString();
-  const message = args
-    .map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
-    .join(' ');
-  return `${timestamp} [${level.toUpperCase()}] [${name}] ${message}`;
-};
-
-const log = (level: string, name: string, ...args: unknown[]) => {
-  if (!shouldLog(level)) return;
-
+  // Ensure workspace root directory exists
   try {
-    const logMessage = formatLogMessage(level, name, ...args);
-    // CRITICAL: All logging MUST go to stderr for STDIO transport compatibility
-    process.stderr.write(`${logMessage}\n`);
-  } catch {
-    // Silent failure - absolutely cannot break MCP STDIO protocol
+    fs.mkdirSync(workspacesRoot, { recursive: true });
+  } catch (error) {
+    // If we can't create workspace root, fall back to stderr
+    console.warn(
+      `Could not create workspace root ${workspacesRoot}, logging to stderr:`,
+      error
+    );
+    return '';
+  }
+
+  return path.join(workspacesRoot, 'workspace_mcp.log');
+};
+
+// Check if pretty-printed logs are requested
+const usePrettyLogs = process.env.WORKSPACES_LOG_PRETTY === 'true';
+
+// Create root Pino logger with file-based logging
+const logFilePath = getLogFilePath();
+const pinoConfigOptions = {
+  name: 'workspaces-mcp',
+  level: getLogLevel(),
+  transport: usePrettyLogs
+    ? {
+        target: 'pino-pretty',
+        options: {
+          destination: logFilePath || 2, // File path or stderr fallback
+          colorize: true,
+          translateTime: 'yyyy-mm-dd HH:MM:ss',
+          ignore: 'pid,hostname,component,name',
+          mkdir: true, // Create directories if needed
+          messageFormat: '{if component}[{component}] {end}{msg}',
+        },
+      }
+    : undefined,
+  base: { pid: process.pid },
+  timestamp: pino.stdTimeFunctions.isoTime,
+};
+const pinoDestination = logFilePath
+  ? pino.destination(logFilePath)
+  : process.stderr;
+const rootLogger = pino(pinoConfigOptions, pinoDestination);
+
+export const pinoConfig = {
+  ...pinoConfigOptions,
+  destination: {
+    type: logFilePath ? 'file' : 'stderr',
+    path: logFilePath || 'stderr',
+  },
+  environment: {
+    WORKSPACES_ROOT: process.env.WORKSPACES_ROOT,
+    WORKSPACES_LOG_LEVEL: process.env.WORKSPACES_LOG_LEVEL,
+    WORKSPACES_LOG_PRETTY: process.env.WORKSPACES_LOG_PRETTY,
+    NODE_ENV: process.env.NODE_ENV,
+  },
+  computed: {
+    finalLogLevel: getLogLevel(),
+    usePrettyLogs,
+    logFilePath,
+  },
+};
+
+// Export main logger with compatible interface
+export const logger = {
+  debug: (message: string, ...args: any[]) =>
+    rootLogger.debug(message, ...args),
+  info: (message: string, ...args: any[]) => rootLogger.info(message, ...args),
+  warn: (message: string, ...args: any[]) => rootLogger.warn(message, ...args),
+  error: (message: string, ...args: any[]) =>
+    rootLogger.error(message, ...args),
+  fatal: (message: string, ...args: any[]) =>
+    rootLogger.fatal(message, ...args),
+};
+
+// Helper function to format component names for better readability
+const formatComponentName = (name: string): string => {
+  // For pretty logs, format with padding/truncation for alignment
+  // For JSON logs, use full component names
+  if (usePrettyLogs) {
+    // Total bracket length will be 20 chars: [name-padded-to-18] + 2 brackets = 20 total
+    const nameLength = 18; // Reserve 2 chars for [ and ]
+    if (name.length > nameLength) {
+      return `${name.slice(0, nameLength - 1)}…`;
+    }
+    // Pad the name to exactly nameLength, so [name] will be exactly 20 chars
+    return name.padEnd(nameLength);
+  } else {
+    // For JSON logs, use full component name without truncation or padding
+    return name;
   }
 };
 
-export const logger = {
-  debug: (...args: unknown[]) => log('debug', 'workspaces-mcp', ...args),
-  info: (...args: unknown[]) => log('info', 'workspaces-mcp', ...args),
-  warn: (...args: unknown[]) => log('warn', 'workspaces-mcp', ...args),
-  error: (...args: unknown[]) => log('error', 'workspaces-mcp', ...args),
-  fatal: (...args: unknown[]) => log('fatal', 'workspaces-mcp', ...args),
-};
-
+// Create child logger factory with component name
 export const createChildLogger = (name: string) => {
+  const formattedName = formatComponentName(name);
+  const childLogger = rootLogger.child({ component: formattedName });
+
   return {
-    debug: (...args: unknown[]) => log('debug', name, ...args),
-    info: (...args: unknown[]) => log('info', name, ...args),
-    warn: (...args: unknown[]) => log('warn', name, ...args),
-    error: (...args: unknown[]) => log('error', name, ...args),
-    fatal: (...args: unknown[]) => log('fatal', name, ...args),
+    debug: (message: string, ...args: any[]) =>
+      childLogger.debug(message, ...args),
+    info: (message: string, ...args: any[]) =>
+      childLogger.info(message, ...args),
+    warn: (message: string, ...args: any[]) =>
+      childLogger.warn(message, ...args),
+    error: (message: string, ...args: any[]) =>
+      childLogger.error(message, ...args),
+    fatal: (message: string, ...args: any[]) =>
+      childLogger.fatal(message, ...args),
   };
 };
+
+// Export Pino logger for advanced usage
+export { rootLogger as pinoLogger };

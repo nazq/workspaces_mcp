@@ -83,7 +83,7 @@ describe('TransportFactory', () => {
 
     it('should ignore invalid MCP_TRANSPORT values', () => {
       process.env.MCP_TRANSPORT = 'invalid';
-      process.env.NODE_ENV = 'development';
+      process.env.WORKSPACES_TRANSPORT = 'http';
 
       const transport = TransportFactory.create();
 
@@ -92,7 +92,7 @@ describe('TransportFactory', () => {
     });
 
     it('should auto-detect STDIO environment', () => {
-      process.env.NODE_ENV = 'production';
+      process.env.WORKSPACES_TRANSPORT = 'stdio';
       // Mock non-TTY environment
       Object.defineProperty(process.stdin, 'isTTY', { value: false });
       Object.defineProperty(process.stdout, 'isTTY', { value: false });
@@ -102,25 +102,25 @@ describe('TransportFactory', () => {
       expect(transport).toBeInstanceOf(StdioTransport);
     });
 
-    it('should auto-detect development environment (NODE_ENV=development)', () => {
-      process.env.NODE_ENV = 'development';
+    it('should auto-detect HTTP transport when WORKSPACES_TRANSPORT=http', () => {
+      process.env.WORKSPACES_TRANSPORT = 'http';
 
       const transport = TransportFactory.create();
 
       expect(transport).toBeInstanceOf(HttpTransport);
     });
 
-    it('should auto-detect development environment (NODE_ENV includes dev)', () => {
-      process.env.NODE_ENV = 'development-local';
+    it('should detect HTTP transport with explicit WORKSPACES_TRANSPORT', () => {
+      process.env.WORKSPACES_TRANSPORT = 'http';
 
       const transport = TransportFactory.create();
 
       expect(transport).toBeInstanceOf(HttpTransport);
     });
 
-    it('should auto-detect development environment (--dev flag)', () => {
-      // Set development environment to ensure it's not confused with STDIO detection
-      process.env.NODE_ENV = 'development';
+    it('should detect HTTP transport with --dev flag', () => {
+      // Set HTTP transport to ensure it's not confused with STDIO detection
+      process.env.WORKSPACES_TRANSPORT = 'http';
       process.env.MCP_TRANSPORT = '';
 
       // Store original argv and replace with test argv
@@ -135,9 +135,9 @@ describe('TransportFactory', () => {
       process.argv = originalArgv;
     });
 
-    it('should auto-detect development environment (--http flag)', () => {
-      // Set development environment to ensure it's not confused with STDIO detection
-      process.env.NODE_ENV = 'development';
+    it('should detect HTTP transport with --http flag', () => {
+      // Set HTTP transport to ensure it's not confused with STDIO detection
+      process.env.WORKSPACES_TRANSPORT = 'http';
       process.env.MCP_TRANSPORT = '';
 
       // Store original argv and replace with test argv
@@ -153,7 +153,7 @@ describe('TransportFactory', () => {
     });
 
     it('should default to STDIO transport', () => {
-      process.env.NODE_ENV = 'production';
+      process.env.WORKSPACES_TRANSPORT = 'stdio';
       process.env.MCP_TRANSPORT = '';
 
       // Clear argv to avoid conflicts
@@ -170,7 +170,7 @@ describe('TransportFactory', () => {
 
   describe('environment detection helpers', () => {
     it('should detect STDIO environment correctly', () => {
-      process.env.NODE_ENV = 'production';
+      process.env.WORKSPACES_TRANSPORT = 'stdio';
       Object.defineProperty(process.stdin, 'isTTY', { value: false });
       Object.defineProperty(process.stdout, 'isTTY', { value: false });
 
@@ -179,8 +179,8 @@ describe('TransportFactory', () => {
       expect(transport).toBeInstanceOf(StdioTransport);
     });
 
-    it('should not detect STDIO environment in development', () => {
-      process.env.NODE_ENV = 'development';
+    it('should use HTTP transport when WORKSPACES_TRANSPORT=http even in non-TTY environment', () => {
+      process.env.WORKSPACES_TRANSPORT = 'http';
       Object.defineProperty(process.stdin, 'isTTY', { value: false });
       Object.defineProperty(process.stdout, 'isTTY', { value: false });
 

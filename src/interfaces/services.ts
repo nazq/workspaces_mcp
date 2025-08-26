@@ -1,5 +1,5 @@
 // Service Layer Interfaces - Clean Contracts for All Services
-// Professional separation of concerns with Result pattern integration
+// Clean separation of concerns with Result pattern integration
 
 import type {
   CallToolResult,
@@ -198,8 +198,8 @@ export interface ToolHandler<TArgs = unknown, TResult = CallToolResult> {
 }
 
 export interface ToolContext {
-  workspaceRepository: WorkspaceRepository;
-  instructionsRepository: InstructionsRepository;
+  workspaceRepository: WorkspaceService;
+  instructionsRepository: InstructionsService;
   config: AppConfig;
   logger: Logger;
   eventBus: EventBus;

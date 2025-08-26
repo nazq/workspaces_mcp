@@ -38,6 +38,7 @@ export interface WorkspaceRepository {
   create(name: string, options: WorkspaceCreateOptions): Promise<void>;
   list(): Promise<WorkspaceMetadata[]>;
   getMetadata(name: string): Promise<WorkspaceMetadata>;
+  update(name: string, options: Partial<WorkspaceCreateOptions>): Promise<void>;
   delete(name: string): Promise<void>;
   getWorkspacePath(name: string): string;
 }

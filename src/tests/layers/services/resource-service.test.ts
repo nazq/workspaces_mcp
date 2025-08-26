@@ -11,7 +11,7 @@ import type {
   SharedInstruction,
   WorkspaceMetadata,
 } from '../../../types/index.js';
-import { Err, isErr, isOk, Ok } from '../../../utils/result.js';
+import { isErr, isOk, Ok } from '../../../utils/result.js';
 
 // Mock logger to avoid console output during tests
 vi.mock('../../../utils/logger.js', () => ({
@@ -25,8 +25,8 @@ vi.mock('../../../utils/logger.js', () => ({
 
 describe('ResourceService', () => {
   let resourceService: ResourceService;
-  let mockWorkspaceRepository: InstructionsRepository;
-  let mockInstructionsRepository: WorkspaceRepository;
+  let mockWorkspaceRepository: WorkspaceRepository;
+  let mockInstructionsRepository: InstructionsRepository;
 
   const mockWorkspaceMetadata: WorkspaceMetadata = {
     name: 'test-workspace',
@@ -98,22 +98,22 @@ describe('ResourceService', () => {
 
   describe('listResources', () => {
     it('should list resources with workspaces and shared instructions', async () => {
-      // Setup mocks with Result pattern
-      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue(
-        Ok([mockWorkspaceMetadata])
-      );
-      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue(
-        Ok([mockSharedInstruction])
-      );
+      // Setup mocks to return plain arrays (not Result types)
+      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([
+        mockWorkspaceMetadata,
+      ]);
+      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([
+        mockSharedInstruction,
+      ]);
 
       const result = await resourceService.listResources();
 
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
-        expect(result.data.resources).toHaveLength(3); // workspace + shared instruction + global
+        expect(result.value.resources).toHaveLength(3); // workspace + shared instruction + global
 
         // Check workspace resource
-        expect(result.data.resources[0]).toEqual({
+        expect(result.value.resources[0]).toEqual({
           uri: 'workspace://test-workspace',
           name: '📁 test-workspace',
           description: 'A test workspace',
@@ -121,7 +121,7 @@ describe('ResourceService', () => {
         });
 
         // Check shared instruction resource
-        expect(result.data.resources[1]).toEqual({
+        expect(result.value.resources[1]).toEqual({
           uri: 'instruction://shared/react-guide',
           name: '📝 react-guide',
           description: 'React development guide',
@@ -129,10 +129,11 @@ describe('ResourceService', () => {
         });
 
         // Check global instructions resource
-        expect(result.data.resources[2]).toEqual({
+        expect(result.value.resources[2]).toEqual({
           uri: 'instruction://global',
           name: '🌍 Global Instructions',
-          description: '⭐ Essential global instructions - loads automatically for all sessions',
+          description:
+            '⭐ Essential global instructions - loads automatically for all sessions',
           mimeType: 'text/markdown',
         });
       }
@@ -148,36 +149,36 @@ describe('ResourceService', () => {
         description: undefined,
       };
 
-      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue(
-        Ok([workspaceWithoutDescription])
-      );
-      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue(
-        Ok([instructionWithoutDescription])
-      );
+      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([
+        workspaceWithoutDescription,
+      ]);
+      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([
+        instructionWithoutDescription,
+      ]);
 
       const result = await resourceService.listResources();
 
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
-        expect(result.data.resources[0]?.description).toBe(
+        expect(result.value.resources[0]?.description).toBe(
           'Workspace: test-workspace'
         );
-        expect(result.data.resources[1]?.description).toBe(
+        expect(result.value.resources[1]?.description).toBe(
           'Shared instruction: react-guide'
         );
       }
     });
 
     it('should handle empty workspaces and instructions', async () => {
-      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue(Ok([]));
-      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue(Ok([]));
+      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([]);
+      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([]);
 
       const result = await resourceService.listResources();
 
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
-        expect(result.data.resources).toHaveLength(1); // Only global instructions
-        expect(result.data.resources[0]?.uri).toBe('instruction://global');
+        expect(result.value.resources).toHaveLength(1); // Only global instructions
+        expect(result.value.resources[0]?.uri).toBe('instruction://global');
       }
     });
 
@@ -185,41 +186,43 @@ describe('ResourceService', () => {
       const workspace2 = { ...mockWorkspaceMetadata, name: 'workspace2' };
       const instruction2 = { ...mockSharedInstruction, name: 'python-guide' };
 
-      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue(
-        Ok([mockWorkspaceMetadata, workspace2])
-      );
-      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue(
-        Ok([mockSharedInstruction, instruction2])
-      );
+      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([
+        mockWorkspaceMetadata,
+        workspace2,
+      ]);
+      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([
+        mockSharedInstruction,
+        instruction2,
+      ]);
 
       const result = await resourceService.listResources();
 
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
-        expect(result.data.resources).toHaveLength(5); // 2 workspaces + 2 shared instructions + global
+        expect(result.value.resources).toHaveLength(5); // 2 workspaces + 2 shared instructions + global
       }
     });
 
     it('should handle error when workspace repository fails', async () => {
-      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue(
-        Err(new Error('Database error'))
+      vi.mocked(mockWorkspaceRepository.list).mockRejectedValue(
+        new Error('Database error')
       );
-      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue(Ok([]));
+      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue([]);
 
       const result = await resourceService.listResources();
 
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
         // Should still return global instructions even if workspace listing fails
-        expect(result.data.resources).toHaveLength(1);
-        expect(result.data.resources[0]?.uri).toBe('instruction://global');
+        expect(result.value.resources).toHaveLength(1);
+        expect(result.value.resources[0]?.uri).toBe('instruction://global');
       }
     });
 
     it('should handle error when instructions repository fails', async () => {
-      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue(Ok([]));
-      vi.mocked(mockInstructionsRepository.listShared).mockResolvedValue(
-        Err(new Error('File error'))
+      vi.mocked(mockWorkspaceRepository.list).mockResolvedValue([]);
+      vi.mocked(mockInstructionsRepository.listShared).mockRejectedValue(
+        new Error('File error')
       );
 
       const result = await resourceService.listResources();
@@ -227,8 +230,8 @@ describe('ResourceService', () => {
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
         // Should still return global instructions even if shared instructions listing fails
-        expect(result.data.resources).toHaveLength(1);
-        expect(result.data.resources[0]?.uri).toBe('instruction://global');
+        expect(result.value.resources).toHaveLength(1);
+        expect(result.value.resources[0]?.uri).toBe('instruction://global');
       }
     });
   });
@@ -236,15 +239,13 @@ describe('ResourceService', () => {
   describe('readResource', () => {
     describe('workspace resources', () => {
       it('should read workspace resource successfully', async () => {
-        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(Ok(true));
-        vi.mocked(mockWorkspaceRepository.getMetadata).mockResolvedValue(
-          Ok({
-            ...mockWorkspaceMetadata,
-            updatedAt: mockWorkspaceMetadata.modifiedAt, // Add updatedAt field
-            size: 1024,
-            fileCount: 5,
-          })
-        );
+        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(true);
+        vi.mocked(mockWorkspaceRepository.getMetadata).mockResolvedValue({
+          ...mockWorkspaceMetadata,
+          updatedAt: mockWorkspaceMetadata.modifiedAt, // Add updatedAt field
+          size: 1024,
+          fileCount: 5,
+        });
 
         const result = await resourceService.readResource(
           'workspace://test-workspace'
@@ -252,13 +253,13 @@ describe('ResourceService', () => {
 
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
-          expect(result.data.contents).toHaveLength(1);
-          expect(result.data.contents[0]).toMatchObject({
+          expect(result.value.contents).toHaveLength(1);
+          expect(result.value.contents[0]).toMatchObject({
             uri: 'workspace://test-workspace',
             mimeType: 'application/json',
           });
 
-          const content = JSON.parse(result.data.contents[0]!.text!);
+          const content = JSON.parse(result.value.contents[0]!.text!);
           expect(content.name).toBe('test-workspace');
           expect(content.description).toBe('A test workspace');
           expect(content.path).toBe('/path/to/workspace');
@@ -266,13 +267,17 @@ describe('ResourceService', () => {
       });
 
       it('should return error for non-existent workspace', async () => {
-        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(Ok(false));
+        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(false);
 
-        const result = await resourceService.readResource('workspace://non-existent');
+        const result = await resourceService.readResource(
+          'workspace://non-existent'
+        );
 
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
-          expect(result.error.message).toBe("Workspace 'non-existent' not found");
+          expect(result.error.message).toBe(
+            "Workspace 'non-existent' not found"
+          );
         }
       });
 
@@ -284,9 +289,9 @@ describe('ResourceService', () => {
           size: 1024,
           fileCount: 5,
         };
-        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(Ok(true));
+        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(true);
         vi.mocked(mockWorkspaceRepository.getMetadata).mockResolvedValue(
-          Ok(workspaceWithoutDescription)
+          workspaceWithoutDescription
         );
 
         const result = await resourceService.readResource(
@@ -295,7 +300,7 @@ describe('ResourceService', () => {
 
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
-          const content = JSON.parse(result.data.contents[0]!.text!);
+          const content = JSON.parse(result.value.contents[0]!.text!);
           expect(content.description).toBeUndefined();
         }
       });
@@ -304,7 +309,7 @@ describe('ResourceService', () => {
     describe('instruction resources', () => {
       it('should read global instructions', async () => {
         vi.mocked(mockInstructionsRepository.getGlobal).mockResolvedValue(
-          Ok(mockGlobalInstructions)
+          mockGlobalInstructions
         );
 
         const result = await resourceService.readResource(
@@ -313,8 +318,8 @@ describe('ResourceService', () => {
 
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
-          expect(result.data.contents).toHaveLength(1);
-          expect(result.data.contents[0]).toEqual({
+          expect(result.value.contents).toHaveLength(1);
+          expect(result.value.contents[0]).toEqual({
             uri: 'instruction://global',
             mimeType: 'text/markdown',
             text: '# Global Instructions\n\nThese apply to all workspaces.',
@@ -324,7 +329,7 @@ describe('ResourceService', () => {
 
       it('should read shared instruction', async () => {
         vi.mocked(mockInstructionsRepository.getShared).mockResolvedValue(
-          Ok(mockSharedInstruction)
+          mockSharedInstruction
         );
 
         const result = await resourceService.readResource(
@@ -333,8 +338,8 @@ describe('ResourceService', () => {
 
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
-          expect(result.data.contents).toHaveLength(1);
-          expect(result.data.contents[0]).toEqual({
+          expect(result.value.contents).toHaveLength(1);
+          expect(result.value.contents[0]).toEqual({
             uri: 'instruction://shared/react-guide',
             mimeType: 'text/markdown',
             text: '# React Guide\n\nUse hooks and functional components.',
@@ -347,20 +352,26 @@ describe('ResourceService', () => {
       });
 
       it('should return error for invalid instruction path', async () => {
-        const result = await resourceService.readResource('instruction://invalid/path');
+        const result = await resourceService.readResource(
+          'instruction://invalid/path'
+        );
 
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
-          expect(result.error.message).toContain('Invalid instruction path: invalid/path');
+          expect(result.error.message).toContain(
+            'Invalid instruction path: invalid/path'
+          );
         }
       });
 
       it('should handle instruction repository errors gracefully', async () => {
-        vi.mocked(mockInstructionsRepository.getGlobal).mockResolvedValue(
-          Err(new Error('File not found'))
+        vi.mocked(mockInstructionsRepository.getGlobal).mockRejectedValue(
+          new Error('File not found')
         );
 
-        const result = await resourceService.readResource('instruction://global');
+        const result = await resourceService.readResource(
+          'instruction://global'
+        );
 
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
@@ -399,7 +410,7 @@ describe('ResourceService', () => {
 
       it('should handle complex paths correctly', async () => {
         vi.mocked(mockInstructionsRepository.getShared).mockResolvedValue(
-          Ok(mockSharedInstruction)
+          mockSharedInstruction
         );
 
         const result = await resourceService.readResource(
@@ -416,8 +427,8 @@ describe('ResourceService', () => {
     describe('error handling', () => {
       it('should handle Error instances from repository', async () => {
         const originalError = new Error('Specific error message');
-        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(
-          Err(originalError)
+        vi.mocked(mockWorkspaceRepository.exists).mockRejectedValue(
+          originalError
         );
 
         const result = await resourceService.readResource('workspace://test');
@@ -437,14 +448,16 @@ describe('ResourceService', () => {
 
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
-          expect(result.error.message).toContain('Failed to read workspace resource');
+          expect(result.error.message).toContain(
+            'Failed to read workspace resource'
+          );
         }
       });
 
       it('should handle workspace repository errors', async () => {
-        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(Ok(true));
-        vi.mocked(mockWorkspaceRepository.getMetadata).mockResolvedValue(
-          Err(new Error('Database connection failed'))
+        vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(true);
+        vi.mocked(mockWorkspaceRepository.getMetadata).mockRejectedValue(
+          new Error('Database connection failed')
         );
 
         const result = await resourceService.readResource('workspace://test');
@@ -474,25 +487,27 @@ describe('ResourceService', () => {
     });
 
     it('should handle URIs with numbers', async () => {
-      vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(Ok(true));
-      vi.mocked(mockWorkspaceRepository.getMetadata).mockResolvedValue(
-        Ok({
-          ...mockWorkspaceMetadata,
-          name: 'project123',
-          updatedAt: mockWorkspaceMetadata.modifiedAt,
-          size: 1024,
-          fileCount: 5,
-        })
-      );
+      vi.mocked(mockWorkspaceRepository.exists).mockResolvedValue(true);
+      vi.mocked(mockWorkspaceRepository.getMetadata).mockResolvedValue({
+        ...mockWorkspaceMetadata,
+        name: 'project123',
+        updatedAt: mockWorkspaceMetadata.modifiedAt,
+        size: 1024,
+        fileCount: 5,
+      });
 
-      const result = await resourceService.readResource('workspace://project123');
+      const result = await resourceService.readResource(
+        'workspace://project123'
+      );
 
       expect(isOk(result)).toBe(true);
       expect(mockWorkspaceRepository.exists).toHaveBeenCalledWith('project123');
     });
 
     it('should reject malformed URI with colons in wrong place', async () => {
-      const result = await resourceService.readResource('invalid:scheme://path');
+      const result = await resourceService.readResource(
+        'invalid:scheme://path'
+      );
 
       expect(isErr(result)).toBe(true);
       if (isErr(result)) {

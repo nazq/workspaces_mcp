@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { MCP_RESOURCE_SCHEMES } from '../../../config/constants.js';
 import { ResourceHandler } from '../../../server/handlers/resources.js';
-import { isOk, isErr } from '../../../utils/result.js';
+import { isOk } from '../../../utils/result.js';
 
 describe('ResourceHandler', () => {
   let resourceHandler: ResourceHandler;
@@ -123,10 +123,13 @@ describe('ResourceHandler', () => {
     it('should read workspace metadata', async () => {
       // Create workspace using the WorkspaceService to ensure proper structure
       const workspaceService = resourceHandler['workspaceService'];
-      const createResult = await workspaceService.createWorkspace('test-workspace', {
-        description: 'Test workspace'
-      });
-      
+      const createResult = await workspaceService.createWorkspace(
+        'test-workspace',
+        {
+          description: 'Test workspace',
+        }
+      );
+
       // Ensure workspace creation succeeded
       expect(isOk(createResult)).toBe(true);
 

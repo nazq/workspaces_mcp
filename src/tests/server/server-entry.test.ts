@@ -22,10 +22,10 @@ describe('Server Index Entry Point', () => {
   describe('createWorkspacesServer', () => {
     it('should create server with default workspace root', () => {
       const server = createWorkspacesServer();
-      
+
       expect(server).toBeDefined();
       expect(typeof server).toBe('object');
-      
+
       // Should have MCP server methods
       expect(server).toHaveProperty('connect');
       expect(server).toHaveProperty('close');
@@ -34,10 +34,10 @@ describe('Server Index Entry Point', () => {
 
     it('should create server with custom workspace root', () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       expect(server).toBeDefined();
       expect(typeof server).toBe('object');
-      
+
       // Should have MCP server methods
       expect(server).toHaveProperty('connect');
       expect(server).toHaveProperty('close');
@@ -45,10 +45,10 @@ describe('Server Index Entry Point', () => {
 
     it('should configure server with correct capabilities', () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       // Server should be configured with capabilities
       expect(server).toBeDefined();
-      
+
       // Note: We can't directly inspect capabilities due to MCP SDK encapsulation,
       // but we can verify the server was created without errors
       expect(typeof server.connect).toBe('function');
@@ -72,10 +72,10 @@ describe('Server Index Entry Point', () => {
 
       // Connect server to test initialization
       await server.connect(mockTransport);
-      
+
       // Server should be connected without errors
       expect(mockTransport.start).toHaveBeenCalled();
-      
+
       // Clean up
       await server.close();
     });
@@ -89,7 +89,7 @@ describe('Server Index Entry Point', () => {
 
       await server.connect(mockTransport);
       expect(mockTransport.start).toHaveBeenCalled();
-      
+
       await server.close();
     });
 
@@ -102,7 +102,7 @@ describe('Server Index Entry Point', () => {
 
       await server.connect(mockTransport);
       expect(mockTransport.start).toHaveBeenCalled();
-      
+
       await server.close();
     });
 
@@ -115,7 +115,7 @@ describe('Server Index Entry Point', () => {
 
       await server.connect(mockTransport);
       expect(mockTransport.start).toHaveBeenCalled();
-      
+
       await server.close();
     });
   });
@@ -123,7 +123,7 @@ describe('Server Index Entry Point', () => {
   describe('Server Lifecycle', () => {
     it('should connect to transport successfully', async () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       const mockTransport = {
         start: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -132,13 +132,13 @@ describe('Server Index Entry Point', () => {
 
       await expect(server.connect(mockTransport)).resolves.not.toThrow();
       expect(mockTransport.start).toHaveBeenCalled();
-      
+
       await server.close();
     });
 
     it('should close server gracefully', async () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       const mockTransport = {
         start: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -152,21 +152,23 @@ describe('Server Index Entry Point', () => {
 
     it('should handle connection errors gracefully', async () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       const failingTransport = {
         start: vi.fn().mockRejectedValue(new Error('Connection failed')),
         close: vi.fn().mockResolvedValue(undefined),
         send: vi.fn(),
       };
 
-      await expect(server.connect(failingTransport)).rejects.toThrow('Connection failed');
+      await expect(server.connect(failingTransport)).rejects.toThrow(
+        'Connection failed'
+      );
     });
   });
 
   describe('Handler Initialization', () => {
     it('should initialize ResourceHandler with correct workspace root', () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       // Server should be created without errors (handlers initialized)
       expect(server).toBeDefined();
       expect(typeof server).toBe('object');
@@ -174,7 +176,7 @@ describe('Server Index Entry Point', () => {
 
     it('should initialize ToolHandler with correct workspace root', () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       // Server should be created without errors (handlers initialized)
       expect(server).toBeDefined();
       expect(typeof server).toBe('object');
@@ -183,7 +185,7 @@ describe('Server Index Entry Point', () => {
     it('should handle handler initialization errors', () => {
       // Test with invalid workspace root to trigger potential errors
       const invalidPath = '/non/existent/path/that/should/cause/issues';
-      
+
       // Handler initialization should not throw during server creation
       expect(() => createWorkspacesServer(invalidPath)).not.toThrow();
     });
@@ -192,7 +194,7 @@ describe('Server Index Entry Point', () => {
   describe('Error Handling', () => {
     it('should handle resource listing errors', async () => {
       const server = createWorkspacesServer('/non/existent/path');
-      
+
       const mockTransport = {
         start: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -201,13 +203,13 @@ describe('Server Index Entry Point', () => {
 
       // Should still be able to connect even with invalid workspace path
       await expect(server.connect(mockTransport)).resolves.not.toThrow();
-      
+
       await server.close();
     });
 
     it('should handle tool execution errors', async () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       const mockTransport = {
         start: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -215,10 +217,10 @@ describe('Server Index Entry Point', () => {
       };
 
       await server.connect(mockTransport);
-      
+
       // Server should handle errors internally when handlers fail
       expect(server).toBeDefined();
-      
+
       await server.close();
     });
   });
@@ -226,14 +228,14 @@ describe('Server Index Entry Point', () => {
   describe('Logging Integration', () => {
     it('should create child logger for server operations', () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       // Server should be created with logging configured
       expect(server).toBeDefined();
     });
 
     it('should log server operations at appropriate levels', async () => {
       const server = createWorkspacesServer(tempDir);
-      
+
       const mockTransport = {
         start: vi.fn().mockResolvedValue(undefined),
         close: vi.fn().mockResolvedValue(undefined),
@@ -243,7 +245,7 @@ describe('Server Index Entry Point', () => {
       // Operations should complete without logging errors
       await server.connect(mockTransport);
       await server.close();
-      
+
       expect(mockTransport.start).toHaveBeenCalled();
       expect(mockTransport.close).toHaveBeenCalled();
     });

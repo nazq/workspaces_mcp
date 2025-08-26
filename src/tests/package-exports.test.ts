@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
+import type {
+  SharedInstruction,
+  Workspace,
+  WorkspaceConfig,
+} from '../index.js';
 import {
   createWorkspacesServer,
   FileSystemService,
   InstructionsService,
   WorkspaceService,
 } from '../index.js';
-import type { SharedInstruction, Workspace, WorkspaceConfig } from '../index.js';
 
 describe('Package Exports', () => {
   describe('Service Exports', () => {
@@ -70,7 +74,7 @@ describe('Package Exports', () => {
   describe('Module Integration', () => {
     it('should create server instance from exported function', () => {
       const server = createWorkspacesServer('/tmp/test-workspaces');
-      
+
       expect(server).toBeDefined();
       expect(typeof server).toBe('object');
       // Should have MCP server methods
@@ -82,7 +86,9 @@ describe('Package Exports', () => {
       const fsService = new FileSystemService();
       expect(fsService).toBeInstanceOf(FileSystemService);
 
-      const instructionsService = new InstructionsService('/tmp/test-workspaces');
+      const instructionsService = new InstructionsService(
+        '/tmp/test-workspaces'
+      );
       expect(instructionsService).toBeInstanceOf(InstructionsService);
     });
   });

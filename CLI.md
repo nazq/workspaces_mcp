@@ -1,6 +1,6 @@
 # Workspaces CLI
 
-Professional command-line interface for testing and debugging workspace operations directly.
+Command-line interface for testing and debugging workspace operations directly.
 
 ## Installation
 
@@ -110,7 +110,7 @@ workspaces-cli delete my-project --force
 
 ## Architecture
 
-The CLI layer integrates directly with the professional 5-layer MCP architecture:
+The CLI layer integrates directly with the 5-layer MCP architecture:
 
 - **Transport Layer**: Not used (direct service calls)
 - **Protocol Layer**: Not used (direct service calls)

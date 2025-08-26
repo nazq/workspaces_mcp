@@ -1,4 +1,4 @@
-// Professional 5-Layer Architecture Exports
+// 5-Layer Architecture Exports
 export * from './controllers/index.js';
 export * from './data/index.js';
 export * from './protocol/index.js';

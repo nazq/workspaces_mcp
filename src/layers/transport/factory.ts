@@ -37,7 +37,7 @@ export class TransportFactory {
     }
   }
 
-  private static detectTransportType(): TransportType {
+  static detectTransportType(): TransportType {
     // Environment-based transport detection
     const explicitType =
       process.env.MCP_TRANSPORT?.toLowerCase() as TransportType;
@@ -67,14 +67,13 @@ export class TransportFactory {
     return (
       process.stdin.isTTY === false &&
       process.stdout.isTTY === false &&
-      !process.env.NODE_ENV?.includes('development')
+      process.env.WORKSPACES_TRANSPORT !== 'http'
     );
   }
 
   private static isDevelopmentEnvironment(): boolean {
     return (
-      process.env.NODE_ENV === 'development' ||
-      process.env.NODE_ENV?.includes('dev') ||
+      process.env.WORKSPACES_TRANSPORT === 'http' ||
       process.argv.includes('--dev') ||
       process.argv.includes('--http')
     );

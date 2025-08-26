@@ -13,9 +13,14 @@ import type {
   ToolHandler,
   ToolRegistry,
 } from '../../interfaces/services.js';
+import { CreateSharedInstructionTool } from '../../tools/handlers/create-shared-instruction-tool.js';
 import { CreateWorkspaceTool } from '../../tools/handlers/create-workspace-tool.js';
+import { GetWorkspaceInfoTool } from '../../tools/handlers/get-workspace-info-tool.js';
+import { ListSharedInstructionsTool } from '../../tools/handlers/list-shared-instructions-tool.js';
+import { ListWorkspacesTool } from '../../tools/handlers/list-workspaces-tool.js';
+import { UpdateGlobalInstructionsTool } from '../../tools/handlers/update-global-instructions-tool.js';
 import type { Result } from '../../utils/result.js';
-import { Err, isErr, Ok } from '../../utils/result.js';
+import { Err, getError, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Modern tool service using extensible ToolRegistry architecture
@@ -33,7 +38,7 @@ import { Err, isErr, Ok } from '../../utils/result.js';
  * // List available tools
  * const listResult = await toolService.listTools();
  * if (isOk(listResult)) {
- *   console.log(`Found ${listResult.data.tools.length} tools`);
+ *   console.log(`Found ${listResult.value.tools.length} tools`);
  * }
  *
  * // Execute tool
@@ -65,8 +70,15 @@ export class ToolService implements IToolService {
    */
   private initializeDefaultTools(): void {
     try {
-      // Register core workspace management tool
+      // Register core workspace management tools
       this.toolRegistry.register(new CreateWorkspaceTool());
+      this.toolRegistry.register(new ListWorkspacesTool());
+      this.toolRegistry.register(new GetWorkspaceInfoTool());
+
+      // Register shared instruction tools
+      this.toolRegistry.register(new CreateSharedInstructionTool());
+      this.toolRegistry.register(new UpdateGlobalInstructionsTool());
+      this.toolRegistry.register(new ListSharedInstructionsTool());
 
       this.logger.info('Default tool handlers initialized successfully');
     } catch (error) {
@@ -148,7 +160,7 @@ export class ToolService implements IToolService {
 
       if (isErr(result)) {
         this.logger.error(`Tool execution failed: ${name}`, {
-          error: result.error,
+          error: getError(result),
           args,
         });
         return result;

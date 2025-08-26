@@ -1,4 +1,4 @@
-// Professional STDIO Transport with Stream Separation
+// STDIO Transport with Stream Separation
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import { createChildLogger } from '../../../utils/logger.js';

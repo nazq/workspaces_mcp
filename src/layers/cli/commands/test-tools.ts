@@ -1,5 +1,5 @@
 // Test MCP Tools Command
-import { isErr } from '../../../utils/result.js';
+import { getError, getValue, isErr } from '../../../utils/result.js';
 import type { ToolService } from '../../services/tool-service.js';
 import { BaseCliCommand, type CliContext } from '../interface.js';
 
@@ -26,12 +26,12 @@ export class TestToolsCommand extends BaseCliCommand {
 
       if (isErr(toolsResult)) {
         this.context.output.error(
-          `Failed to list tools: ${toolsResult.error.message}`
+          `Failed to list tools: ${getError(toolsResult).message}`
         );
         return;
       }
 
-      const tools = toolsResult.data.tools;
+      const tools = getValue(toolsResult).tools;
 
       if (listOnly || remaining.length === 0) {
         this.context.output.info(`Available tools (${tools.length}):`);
@@ -90,7 +90,7 @@ export class TestToolsCommand extends BaseCliCommand {
 
         if (isErr(result)) {
           this.context.output.error(
-            `Tool execution failed: ${result.error.message}`
+            `Tool execution failed: ${getError(result).message}`
           );
           return;
         }
@@ -98,12 +98,12 @@ export class TestToolsCommand extends BaseCliCommand {
         this.context.output.success('Tool executed successfully');
 
         if (verbose) {
-          this.context.output.json(result.data);
+          this.context.output.json(getValue(result));
         } else {
           this.context.output.info('Result: Success');
-          if (result.data.content) {
+          if (getValue(result).content) {
             this.context.output.info(
-              `Content items: ${result.data.content.length}`
+              `Content items: ${getValue(result).content.length}`
             );
           }
         }

@@ -170,7 +170,8 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
         description: options.description ?? metadata.description,
         createdAt: metadata.createdAt,
         modifiedAt: new Date(),
-        template: options.template ?? (metadata as any).template,
+        template:
+          options.template ?? (metadata as { template?: string }).template,
       };
 
       const metadataPath = path.join(workspacePath, '.workspace.json');

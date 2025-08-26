@@ -1,4 +1,4 @@
-// Professional Tool Registry - Extensible, Type-Safe Tool Management
+// Tool Registry - Extensible, Type-Safe Tool Management
 // Replaces the monolithic ToolService with elegant composition
 
 import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
@@ -12,7 +12,7 @@ import type {
 } from '../interfaces/services.js';
 import { createChildLogger } from '../utils/logger.js';
 import type { Result } from '../utils/result.js';
-import { Err, isErr } from '../utils/result.js';
+import { Err, getError, getValue, isErr } from '../utils/result.js';
 
 export class ToolRegistry implements IToolRegistry {
   private handlers = new Map<string, ToolHandler>();
@@ -39,7 +39,7 @@ export class ToolRegistry implements IToolRegistry {
         ({
           name: handler.name,
           description: handler.description,
-          inputSchema: this.zodToJsonSchema(handler.inputSchema),
+          inputSchema: this.zodToJsonSchema(handler.inputSchema as any),
         }) as Tool
     );
   }
@@ -58,10 +58,18 @@ export class ToolRegistry implements IToolRegistry {
       }
 
       // Validate arguments using the handler's schema
-      const parseResult = (handler.inputSchema as any).safeParse(args);
+      const parseResult = (
+        handler.inputSchema as {
+          safeParse: (args: unknown) => {
+            success: boolean;
+            data?: unknown;
+            error?: { errors: unknown[] };
+          };
+        }
+      ).safeParse(args);
       if (!parseResult.success) {
         const error = new Error(
-          `Invalid arguments: ${parseResult.error.message}`
+          `Invalid arguments: ${JSON.stringify(parseResult.error?.errors, null, 2)}`
         );
         await this.emitToolEvent(
           context,
@@ -78,7 +86,10 @@ export class ToolRegistry implements IToolRegistry {
       this.logger.debug(`Executing tool: ${name}`, { args: parseResult.data });
 
       // Execute the tool
-      const result = await handler.execute(parseResult.data, context);
+      const result = await handler.execute(
+        parseResult.data as Record<string, unknown>,
+        context
+      );
 
       const executionTime = Date.now() - startTime;
 
@@ -90,7 +101,7 @@ export class ToolRegistry implements IToolRegistry {
           args,
           executionTime,
           undefined,
-          result.error
+          getError(result)
         );
         return result;
       }
@@ -101,7 +112,7 @@ export class ToolRegistry implements IToolRegistry {
         name,
         args,
         executionTime,
-        result.data
+        getValue(result)
       );
       return result;
     } catch (error) {
@@ -188,13 +199,16 @@ export class ToolRegistry implements IToolRegistry {
       for (const [key, value] of Object.entries(shape)) {
         if (value instanceof z.ZodString) {
           properties[key] = { type: 'string' };
-          if (!(value as any).isOptional()) required.push(key);
+          if (!(value as { isOptional: () => boolean }).isOptional())
+            required.push(key);
         } else if (value instanceof z.ZodNumber) {
           properties[key] = { type: 'number' };
-          if (!(value as any).isOptional()) required.push(key);
+          if (!(value as { isOptional: () => boolean }).isOptional())
+            required.push(key);
         } else if (value instanceof z.ZodBoolean) {
           properties[key] = { type: 'boolean' };
-          if (!(value as any).isOptional()) required.push(key);
+          if (!(value as { isOptional: () => boolean }).isOptional())
+            required.push(key);
         } else {
           // Fallback for complex types
           properties[key] = { type: 'object' };

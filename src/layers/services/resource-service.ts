@@ -1,4 +1,4 @@
-// Professional Resource Service - Clean Architecture with Result Pattern
+// Resource Service - Clean Architecture with Result Pattern
 // Implements bulletproof resource management with comprehensive error handling
 
 import type {
@@ -10,16 +10,18 @@ import type {
 import { EVENTS } from '../../events/events.js';
 import type {
   EventBus,
-  InstructionsRepository,
   ResourceService as IResourceService,
   Logger,
-  WorkspaceRepository,
 } from '../../interfaces/services.js';
 import type { Result } from '../../utils/result.js';
-import { Err, isErr, Ok } from '../../utils/result.js';
+import { Err, getError, getValue, isErr, Ok } from '../../utils/result.js';
+import type {
+  InstructionsRepository,
+  WorkspaceRepository,
+} from '../data/interfaces.js';
 
 /**
- * Professional resource service implementing clean architecture patterns
+ * Resource service implementing clean architecture patterns
  *
  * Provides comprehensive resource discovery and content retrieval for MCP clients.
  * Resources include workspaces, shared instructions, and global instructions.
@@ -30,9 +32,9 @@ import { Err, isErr, Ok } from '../../utils/result.js';
  * const listResult = await resourceService.listResources();
  *
  * if (isOk(listResult)) {
- *   console.log(`Found ${listResult.data.resources.length} resources`);
+ *   console.log(`Found ${listResult.value.resources.length} resources`);
  * } else {
- *   console.error(`Failed to list resources: ${listResult.error.message}`);
+ *   getError(console)(`Failed to list resources: ${getError(listResult).message}`);
  * }
  * ```
  */
@@ -72,15 +74,9 @@ export class ResourceService implements IResourceService {
       let instructionCount = 0;
 
       // Add workspace resources with error handling
-      const workspacesResult = await this.workspaceRepository.list();
-      if (isErr(workspacesResult)) {
-        this.logger.warn(
-          'Failed to list workspaces for resources',
-          workspacesResult.error
-        );
-        // Continue with other resources rather than failing completely
-      } else {
-        for (const workspace of workspacesResult.data) {
+      try {
+        const workspaces = await this.workspaceRepository.list();
+        for (const workspace of workspaces) {
           resources.push({
             uri: `workspace://${workspace.name}`,
             name: `📁 ${workspace.name}`,
@@ -90,17 +86,19 @@ export class ResourceService implements IResourceService {
           });
           workspaceCount++;
         }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to list workspaces for resources',
+          error instanceof Error ? error.message : String(error)
+        );
+        // Continue with other resources rather than failing completely
       }
 
       // Add shared instruction resources with error handling
-      const sharedResult = await this.instructionsRepository.listShared();
-      if (isErr(sharedResult)) {
-        this.logger.warn(
-          'Failed to list shared instructions for resources',
-          sharedResult.error
-        );
-      } else {
-        for (const instruction of sharedResult.data) {
+      try {
+        const sharedInstructions =
+          await this.instructionsRepository.listShared();
+        for (const instruction of sharedInstructions) {
           resources.push({
             uri: `instruction://shared/${instruction.name}`,
             name: `📝 ${instruction.name}`,
@@ -111,6 +109,11 @@ export class ResourceService implements IResourceService {
           });
           instructionCount++;
         }
+      } catch (error) {
+        this.logger.warn(
+          'Failed to list shared instructions for resources',
+          error instanceof Error ? error.message : String(error)
+        );
       }
 
       // Add global instructions resource (always available)
@@ -149,7 +152,15 @@ export class ResourceService implements IResourceService {
       const responseTimeMs = Date.now() - startTime;
 
       this.logger.error('Unexpected error listing resources', {
-        error,
+        error:
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+              }
+            : error,
+        errorString: String(error),
         responseTimeMs,
       });
 
@@ -200,7 +211,7 @@ export class ResourceService implements IResourceService {
         return parseResult;
       }
 
-      const { scheme, path } = parseResult.data;
+      const { scheme, path } = getValue(parseResult);
       let result: Result<ReadResourceResult>;
 
       // Route to appropriate handler based on scheme
@@ -236,7 +247,7 @@ export class ResourceService implements IResourceService {
         try {
           await this.eventBus.emit(EVENTS.RESOURCE_ERROR, {
             uri,
-            error: result.error,
+            error: getError(result),
             timestamp: new Date(),
           });
         } catch (eventError) {
@@ -246,21 +257,24 @@ export class ResourceService implements IResourceService {
       }
 
       // Emit success event
-      const contentLength = result.data.contents.reduce((total, content) => {
-        if (content.text && typeof content.text === 'string') {
-          return total + content.text.length;
-        }
-        if (content.blob) {
-          // Blob content type {} doesn't have length - just count as present
+      const contentLength = getValue(result).contents.reduce(
+        (total, content) => {
+          if (content.text && typeof content.text === 'string') {
+            return total + content.text.length;
+          }
+          if (content.blob) {
+            // Blob content type {} doesn't have length - just count as present
+            return total;
+          }
           return total;
-        }
-        return total;
-      }, 0);
+        },
+        0
+      );
 
       try {
         await this.eventBus.emit(EVENTS.RESOURCE_SERVED, {
           uri,
-          contentType: result.data.contents[0]?.mimeType,
+          contentType: getValue(result).contents[0]?.mimeType,
           contentLength,
           responseTimeMs,
           timestamp: new Date(),
@@ -301,44 +315,24 @@ export class ResourceService implements IResourceService {
       this.logger.debug(`Reading workspace resource: ${workspaceName}`);
 
       // Check if workspace exists
-      const existsResult = await this.workspaceRepository.exists(workspaceName);
-      if (isErr(existsResult)) {
-        return Err(
-          new Error(
-            `Failed to check workspace existence: ${existsResult.error.message}`
-          )
-        );
-      }
-
-      if (!existsResult.data) {
+      const exists = await this.workspaceRepository.exists(workspaceName);
+      if (!exists) {
         return Err(new Error(`Workspace '${workspaceName}' not found`));
       }
 
       // Get workspace metadata
-      const metadataResult =
+      const metadata =
         await this.workspaceRepository.getMetadata(workspaceName);
-      if (isErr(metadataResult)) {
-        return Err(
-          new Error(
-            `Failed to get workspace metadata: ${metadataResult.error.message}`
-          )
-        );
-      }
-
-      const metadata = metadataResult.data;
 
       // Create rich workspace content
       const workspaceInfo = {
         name: metadata.name,
         description: metadata.description,
         path: metadata.path,
-        template: metadata.template,
         createdAt: metadata.createdAt.toISOString(),
-        updatedAt: metadata.updatedAt.toISOString(),
-        fileCount: metadata.fileCount,
-        size: metadata.size,
+        modifiedAt: metadata.modifiedAt.toISOString(),
+        hasInstructions: metadata.hasInstructions,
         stats: {
-          sizeFormatted: this.formatBytes(metadata.size ?? 0),
           ageInDays: Math.floor(
             (Date.now() - metadata.createdAt.getTime()) / (1000 * 60 * 60 * 24)
           ),
@@ -380,24 +374,25 @@ export class ResourceService implements IResourceService {
 
       if (path === 'global') {
         // Read global instructions
-        const globalResult = await this.instructionsRepository.getGlobal();
-        if (isErr(globalResult)) {
+        try {
+          const globalInstructions =
+            await this.instructionsRepository.getGlobal();
+          return Ok({
+            contents: [
+              {
+                uri: 'instruction://global',
+                mimeType: 'text/markdown',
+                text: globalInstructions.content,
+              },
+            ],
+          });
+        } catch (error) {
           return Err(
             new Error(
-              `Failed to get global instructions: ${globalResult.error.message}`
+              `Failed to get global instructions: ${error instanceof Error ? error.message : String(error)}`
             )
           );
         }
-
-        return Ok({
-          contents: [
-            {
-              uri: 'instruction://global',
-              mimeType: 'text/markdown',
-              text: globalResult.data.content,
-            },
-          ],
-        });
       }
 
       if (path.startsWith('shared/')) {
@@ -408,25 +403,25 @@ export class ResourceService implements IResourceService {
           return Err(new Error('Invalid shared instruction name: empty'));
         }
 
-        const instructionResult =
-          await this.instructionsRepository.getShared(instructionName);
-        if (isErr(instructionResult)) {
+        try {
+          const sharedInstruction =
+            await this.instructionsRepository.getShared(instructionName);
+          return Ok({
+            contents: [
+              {
+                uri: `instruction://shared/${instructionName}`,
+                mimeType: 'text/markdown',
+                text: sharedInstruction.content,
+              },
+            ],
+          });
+        } catch (error) {
           return Err(
             new Error(
-              `Failed to get shared instruction '${instructionName}': ${instructionResult.error.message}`
+              `Failed to get shared instruction '${instructionName}': ${error instanceof Error ? error.message : String(error)}`
             )
           );
         }
-
-        return Ok({
-          contents: [
-            {
-              uri: `instruction://shared/${instructionName}`,
-              mimeType: 'text/markdown',
-              text: instructionResult.data.content,
-            },
-          ],
-        });
       }
 
       return Err(
@@ -491,24 +486,5 @@ export class ResourceService implements IResourceService {
       const message = error instanceof Error ? error.message : String(error);
       return Err(new Error(`URI parsing failed: ${message}`));
     }
-  }
-
-  /**
-   * Format bytes to human readable string
-   *
-   * @param bytes - Number of bytes
-   * @returns Formatted string (e.g., "1.5 KB", "2.3 MB")
-   */
-  private formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-
-    const k = 1024;
-    const decimals = 2;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    const size = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals));
-
-    return `${size} ${sizes[i]}`;
   }
 }

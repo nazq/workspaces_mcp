@@ -112,18 +112,28 @@ describe('Binary Entry Points Integration', () => {
       const result = await runProcess('node', [SERVER_PATH], {
         env: {
           WORKSPACES_ROOT: testWorkspacesRoot,
-          NODE_ENV: 'test', // Prevent actual server startup
         },
         timeout: 3000, // Short timeout since we expect it to start quickly
         expectTimeout: true, // We expect this to timeout as server runs indefinitely
       });
 
-      // Server should start logging but we'll kill it due to timeout
-      expect(result.stderr).toContain(
-        '🚀 Starting Professional Workspaces MCP Server'
-      );
-      expect(result.stderr).toContain('📁 Workspaces root:');
-      expect(result.stderr).toContain('🔧 Log level:');
+      // Read from log file instead of stdout since server logs to file
+      const logFile = path.join(testWorkspacesRoot, 'workspace_mcp.log');
+
+      // Wait for log file to be written
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      let logContent = '';
+      try {
+        logContent = await fs.readFile(logFile, 'utf-8');
+      } catch (error) {
+        // Log file might not exist if server failed to start
+      }
+
+      // Server should start logging to file
+      expect(logContent).toContain('🚀 Starting Workspaces MCP Server');
+      expect(logContent).toContain('📁 Workspaces root:');
+      expect(logContent).toContain('🔧 Log level:');
     });
 
     it('should handle server startup errors', async () => {
@@ -131,16 +141,26 @@ describe('Binary Entry Points Integration', () => {
       const result = await runProcess('node', [SERVER_PATH], {
         env: {
           WORKSPACES_ROOT: testWorkspacesRoot,
-          NODE_ENV: 'test',
         },
         timeout: 1000,
         expectTimeout: true,
       });
 
-      // Should start logging
-      expect(result.stderr).toContain(
-        '🚀 Starting Professional Workspaces MCP Server'
-      );
+      // Read from log file instead of stdout
+      const logFile = path.join(testWorkspacesRoot, 'workspace_mcp.log');
+
+      // Wait for log file to be written
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      let logContent = '';
+      try {
+        logContent = await fs.readFile(logFile, 'utf-8');
+      } catch (error) {
+        // Log file might not exist if server failed to start
+      }
+
+      // Should start logging to file
+      expect(logContent).toContain('🚀 Starting Workspaces MCP Server');
     });
 
     it('should respect log level environment variable', async () => {
@@ -148,26 +168,50 @@ describe('Binary Entry Points Integration', () => {
         env: {
           WORKSPACES_ROOT: testWorkspacesRoot,
           WORKSPACES_LOG_LEVEL: 'debug',
-          NODE_ENV: 'test',
         },
         timeout: 2000,
         expectTimeout: true,
       });
 
-      expect(result.stderr).toContain('🔧 Log level: debug');
+      // Read from log file instead of stdout
+      const logFile = path.join(testWorkspacesRoot, 'workspace_mcp.log');
+
+      // Wait for log file to be written
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      let logContent = '';
+      try {
+        logContent = await fs.readFile(logFile, 'utf-8');
+      } catch (error) {
+        // Log file might not exist if server failed to start
+      }
+
+      expect(logContent).toContain('🔧 Log level: debug');
     });
 
     it('should default log level when not specified', async () => {
       const result = await runProcess('node', [SERVER_PATH], {
         env: {
           WORKSPACES_ROOT: testWorkspacesRoot,
-          NODE_ENV: 'test',
         },
         timeout: 2000,
         expectTimeout: true,
       });
 
-      expect(result.stderr).toContain('🔧 Log level: info');
+      // Read from log file instead of stdout
+      const logFile = path.join(testWorkspacesRoot, 'workspace_mcp.log');
+
+      // Wait for log file to be written
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      let logContent = '';
+      try {
+        logContent = await fs.readFile(logFile, 'utf-8');
+      } catch (error) {
+        // Log file might not exist if server failed to start
+      }
+
+      expect(logContent).toContain('🔧 Log level: info');
     });
   });
 });

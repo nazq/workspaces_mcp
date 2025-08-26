@@ -45,7 +45,7 @@ describe('FileSystemService', () => {
 
       const readResult = await fsService.readFile(filePath);
       expect(isOk(readResult)).toBe(true);
-      expect(readResult.data).toBe(content);
+      expect(readResult.value).toBe(content);
     });
 
     it('should create parent directories when writing', async () => {
@@ -57,7 +57,7 @@ describe('FileSystemService', () => {
 
       const readResult = await fsService.readFile(filePath);
       expect(isOk(readResult)).toBe(true);
-      expect(readResult.data).toBe(content);
+      expect(readResult.value).toBe(content);
     });
 
     it('should return error when reading non-existent file', async () => {
@@ -76,27 +76,27 @@ describe('FileSystemService', () => {
 
       const result = await fsService.fileExists(filePath);
       expect(isOk(result)).toBe(true);
-      expect(result.data).toBe(true);
+      expect(result.value).toBe(true);
     });
 
     it('should return false for non-existent file', async () => {
       const filePath = path.join(tempDir, 'non-existent.txt');
       const result = await fsService.fileExists(filePath);
       expect(isOk(result)).toBe(true);
-      expect(result.data).toBe(false);
+      expect(result.value).toBe(false);
     });
 
     it('should return true for existing directory', async () => {
       const result = await fsService.directoryExists(tempDir);
       expect(isOk(result)).toBe(true);
-      expect(result.data).toBe(true);
+      expect(result.value).toBe(true);
     });
 
     it('should return false for non-existent directory', async () => {
       const dirPath = path.join(tempDir, 'non-existent');
       const result = await fsService.directoryExists(dirPath);
       expect(isOk(result)).toBe(true);
-      expect(result.data).toBe(false);
+      expect(result.value).toBe(false);
     });
   });
 
@@ -111,18 +111,18 @@ describe('FileSystemService', () => {
     it('should list files non-recursively', async () => {
       const result = await fsService.listFiles(tempDir, false);
       expect(isOk(result)).toBe(true);
-      expect(result.data).toHaveLength(2);
-      expect(result.data).toContain('file1.txt');
-      expect(result.data).toContain('file2.md');
+      expect(result.value).toHaveLength(2);
+      expect(result.value).toContain('file1.txt');
+      expect(result.value).toContain('file2.md');
     });
 
     it('should list files recursively', async () => {
       const result = await fsService.listFiles(tempDir, true);
       expect(isOk(result)).toBe(true);
-      expect(result.data).toHaveLength(3);
-      expect(result.data).toContain('file1.txt');
-      expect(result.data).toContain('file2.md');
-      expect(result.data).toContain(path.join('subdir', 'file3.txt'));
+      expect(result.value).toHaveLength(3);
+      expect(result.value).toContain('file1.txt');
+      expect(result.value).toContain('file2.md');
+      expect(result.value).toContain(path.join('subdir', 'file3.txt'));
     });
   });
 });

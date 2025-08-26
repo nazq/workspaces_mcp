@@ -14,7 +14,7 @@ import type {
   SharedInstruction,
 } from '../types/index.js';
 import { SharedInstructionNotFoundError } from '../utils/errors.js';
-import { isErr } from '../utils/result.js';
+import { getError, getValue, isErr } from '../utils/result.js';
 import {
   validateFileContent,
   validateInstructionName,
@@ -64,7 +64,7 @@ export class InstructionsService {
     const fileExistsResult = await this.fs.fileExists(
       this.globalInstructionsPath
     );
-    if (isErr(fileExistsResult) || !fileExistsResult.data) {
+    if (isErr(fileExistsResult) || !getValue(fileExistsResult)) {
       await this.updateGlobalInstructions(DEFAULT_GLOBAL_INSTRUCTIONS);
     }
 
@@ -73,20 +73,20 @@ export class InstructionsService {
 
     if (isErr(statsResult)) {
       throw new Error(
-        `Failed to get file stats for global instructions: ${statsResult.error.message}`
+        `Failed to get file stats for global instructions: ${getError(statsResult) instanceof Error ? getError(statsResult).message : 'Unknown error'}`
       );
     }
 
     const contentResult = await this.fs.readFile(this.globalInstructionsPath);
     if (isErr(contentResult)) {
       throw new Error(
-        `Failed to read global instructions: ${contentResult.error.message}`
+        `Failed to read global instructions: ${getError(contentResult) instanceof Error ? getError(contentResult).message : 'Unknown error'}`
       );
     }
 
     return {
-      content: contentResult.data,
-      lastModified: statsResult.data.updatedAt,
+      content: getValue(contentResult),
+      lastModified: getValue(statsResult).updatedAt,
     };
   }
 
@@ -94,7 +94,7 @@ export class InstructionsService {
     const existsResult = await this.fs.directoryExists(
       this.sharedInstructionsPath
     );
-    if (isErr(existsResult) || !existsResult.data) {
+    if (isErr(existsResult) || !getValue(existsResult)) {
       return [];
     }
 
@@ -103,7 +103,7 @@ export class InstructionsService {
       return [];
     }
 
-    const files = filesResult.data;
+    const files = getValue(filesResult);
     const instructions: SharedInstruction[] = [];
 
     for (const file of files) {
@@ -130,30 +130,30 @@ export class InstructionsService {
     const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
     const fileExistsResult = await this.fs.fileExists(filePath);
-    if (isErr(fileExistsResult) || !fileExistsResult.data) {
+    if (isErr(fileExistsResult) || !getValue(fileExistsResult)) {
       throw new SharedInstructionNotFoundError(name);
     }
 
     const contentResult = await this.fs.readFile(filePath);
     if (isErr(contentResult)) {
       throw new Error(
-        `Failed to read instruction ${name}: ${contentResult.error.message}`
+        `Failed to read instruction ${name}: ${getError(contentResult) instanceof Error ? getError(contentResult).message : 'Unknown error'}`
       );
     }
 
     const statsResult = await this.fs.getFileStats(filePath);
     if (isErr(statsResult)) {
       throw new Error(
-        `Failed to get file stats for ${name}: ${statsResult.error.message}`
+        `Failed to get file stats for ${name}: ${getError(statsResult) instanceof Error ? getError(statsResult).message : 'Unknown error'}`
       );
     }
 
     return {
       name,
       path: filePath,
-      content: contentResult.data,
-      createdAt: statsResult.data.createdAt,
-      updatedAt: statsResult.data.updatedAt,
+      content: getValue(contentResult),
+      createdAt: getValue(statsResult).createdAt,
+      updatedAt: getValue(statsResult).updatedAt,
     };
   }
 
@@ -163,7 +163,7 @@ export class InstructionsService {
     const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
     const fileExistsResult = await this.fs.fileExists(filePath);
-    if (isErr(fileExistsResult) || !fileExistsResult.data) {
+    if (isErr(fileExistsResult) || !getValue(fileExistsResult)) {
       throw new SharedInstructionNotFoundError(name);
     }
 
@@ -177,7 +177,7 @@ export class InstructionsService {
     const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
     const fileExistsResult = await this.fs.fileExists(filePath);
-    if (isErr(fileExistsResult) || !fileExistsResult.data) {
+    if (isErr(fileExistsResult) || !getValue(fileExistsResult)) {
       throw new SharedInstructionNotFoundError(name);
     }
 

@@ -101,7 +101,7 @@ describe('ToolHandler', () => {
 
         // Try to create again - should return error
         const result = await toolHandler.callTool('create_workspace', args);
-        
+
         expect(result.isError).toBe(true);
         expect(result.content[0]?.text).toContain('Failed to create workspace');
       });
@@ -153,11 +153,17 @@ describe('ToolHandler', () => {
       });
 
       it('should return error for non-existent workspace', async () => {
-        const result = await toolHandler.callTool('get_workspace_info', { name: 'non-existent' });
-        
+        const result = await toolHandler.callTool('get_workspace_info', {
+          name: 'non-existent',
+        });
+
         expect(result.isError).toBe(true);
-        expect(result.content[0]?.text).toContain('❌ Failed to get workspace info');
-        expect(result.content[0]?.text).toContain('Workspace not found: non-existent');
+        expect(result.content[0]?.text).toContain(
+          '❌ Failed to get workspace info'
+        );
+        expect(result.content[0]?.text).toContain(
+          'Workspace not found: non-existent'
+        );
       });
     });
 

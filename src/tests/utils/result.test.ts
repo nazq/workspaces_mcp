@@ -29,7 +29,7 @@ describe('Result Pattern', () => {
       expect(isErr(result)).toBe(false);
       expect(result.success).toBe(true);
       if (isOk(result)) {
-        expect(result.data).toBe('success');
+        expect(result.value).toBe('success');
       }
     });
 
@@ -66,9 +66,9 @@ describe('Result Pattern', () => {
       const result: Result<number, Error> = Ok(42);
 
       if (isOk(result)) {
-        // TypeScript should know result.data is number
-        expect(typeof result.data).toBe('number');
-        expect(result.data).toBe(42);
+        // TypeScript should know result.value is number
+        expect(typeof result.value).toBe('number');
+        expect(result.value).toBe(42);
       }
 
       const errorResult: Result<number, Error> = Err(new Error('test'));
@@ -88,7 +88,7 @@ describe('Result Pattern', () => {
 
       expect(isOk(mapped)).toBe(true);
       if (isOk(mapped)) {
-        expect(mapped.data).toBe(10);
+        expect(mapped.value).toBe(10);
       }
     });
 
@@ -113,7 +113,7 @@ describe('Result Pattern', () => {
 
       expect(isOk(mapped)).toBe(true);
       if (isOk(mapped)) {
-        expect(mapped.data).toEqual({
+        expect(mapped.value).toEqual({
           name: 'test',
           value: 84,
           processed: true,
@@ -129,7 +129,7 @@ describe('Result Pattern', () => {
 
       expect(isOk(chained)).toBe(true);
       if (isOk(chained)) {
-        expect(chained.data).toBe(10);
+        expect(chained.value).toBe(10);
       }
     });
 
@@ -183,7 +183,7 @@ describe('Result Pattern', () => {
 
       expect(isOk(mapped)).toBe(true);
       if (isOk(mapped)) {
-        expect(mapped.data).toBe(42);
+        expect(mapped.value).toBe(42);
       }
     });
   });
@@ -235,7 +235,7 @@ describe('Result Pattern', () => {
 
         expect(isOk(result)).toBe(true);
         if (isOk(result)) {
-          expect(result.data).toBe(42);
+          expect(result.value).toBe(42);
         }
       });
 
@@ -287,7 +287,7 @@ describe('Result Pattern', () => {
 
       expect(isOk(collected)).toBe(true);
       if (isOk(collected)) {
-        expect(collected.data).toEqual([1, 2, 3]);
+        expect(collected.value).toEqual([1, 2, 3]);
       }
     });
 
@@ -308,7 +308,7 @@ describe('Result Pattern', () => {
 
       expect(isOk(collected)).toBe(true);
       if (isOk(collected)) {
-        expect(collected.data).toEqual([]);
+        expect(collected.value).toEqual([]);
       }
     });
   });
@@ -353,7 +353,7 @@ describe('Result Pattern', () => {
 
         expect(isOk(mapped)).toBe(true);
         if (isOk(mapped)) {
-          expect(mapped.data).toBe(10);
+          expect(mapped.value).toBe(10);
         }
       });
 
@@ -388,7 +388,7 @@ describe('Result Pattern', () => {
 
         expect(isOk(chained)).toBe(true);
         if (isOk(chained)) {
-          expect(chained.data).toBe(10);
+          expect(chained.value).toBe(10);
         }
       });
 
@@ -432,11 +432,11 @@ describe('Result Pattern', () => {
       expect(isOk(undefinedResult)).toBe(true);
 
       if (isOk(nullResult)) {
-        expect(nullResult.data).toBeNull();
+        expect(nullResult.value).toBeNull();
       }
 
       if (isOk(undefinedResult)) {
-        expect(undefinedResult.data).toBeUndefined();
+        expect(undefinedResult.value).toBeUndefined();
       }
     });
 
@@ -456,7 +456,7 @@ describe('Result Pattern', () => {
 
       expect(isOk(transformed)).toBe(true);
       if (isOk(transformed)) {
-        expect(transformed.data).toEqual([
+        expect(transformed.value).toEqual([
           { name: 'Alice', age: 30, category: 'senior' },
         ]);
       }

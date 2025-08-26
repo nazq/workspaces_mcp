@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { EVENTS } from '../../events/events.js';
 import type { ToolContext, ToolHandler } from '../../interfaces/services.js';
 import type { Result } from '../../utils/result.js';
-import { Err, isErr, Ok } from '../../utils/result.js';
+import { Err, getError, getValue, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Tool handler for creating new workspaces
@@ -60,33 +60,41 @@ export class CreateWorkspaceTool implements ToolHandler {
       });
 
       // Check if workspace already exists
-      const existsResult = await context.workspaceRepository.exists(name);
+      const existsResult =
+        await context.workspaceRepository.workspaceExists(name);
       if (isErr(existsResult)) {
+        const message =
+          getError(existsResult) instanceof Error
+            ? getError(existsResult).message
+            : String(getError(existsResult));
         return Err(
-          new Error(
-            `Failed to check workspace existence: ${existsResult.error.message}`
-          )
+          new Error(`Failed to check workspace existence: ${message}`)
         );
       }
 
-      if (existsResult.data) {
+      if (getValue(existsResult)) {
         return Err(new Error(`Workspace '${name}' already exists`));
       }
 
       // Create the workspace using the repository
-      const createResult = await context.workspaceRepository.create(name, {
-        description,
-        template,
-      });
+      const createResult = await context.workspaceRepository.createWorkspace(
+        name,
+        {
+          description,
+          template,
+        }
+      );
 
       if (isErr(createResult)) {
         context.logger.error(
           `Failed to create workspace: ${name}`,
-          createResult.error
+          getError(createResult)
         );
-        return Err(
-          new Error(`Failed to create workspace: ${createResult.error.message}`)
-        );
+        const message =
+          getError(createResult) instanceof Error
+            ? getError(createResult).message
+            : String(getError(createResult));
+        return Err(new Error(`Failed to create workspace: ${message}`));
       }
 
       // Emit workspace created event for other components to react

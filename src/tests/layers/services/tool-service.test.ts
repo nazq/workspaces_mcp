@@ -1,5 +1,5 @@
+import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 import type {
@@ -10,7 +10,7 @@ import type {
   ToolRegistry,
 } from '../../../interfaces/services.js';
 import { ToolService } from '../../../layers/services/tool-service.js';
-import { Ok, Err } from '../../../utils/result.js';
+import { Err, Ok } from '../../../utils/result.js';
 
 // Mock tool handler for testing
 const createMockToolHandler = (name: string = 'mock-tool'): ToolHandler => ({
@@ -55,9 +55,11 @@ const createMockToolRegistry = (): ToolRegistry => ({
       inputSchema: { type: 'object', properties: {} },
     } as Tool,
   ]),
-  execute: vi.fn().mockResolvedValue(Ok({
-    content: [{ type: 'text', text: 'Success' }],
-  })),
+  execute: vi.fn().mockResolvedValue(
+    Ok({
+      content: [{ type: 'text', text: 'Success' }],
+    })
+  ),
   hasHandler: vi.fn().mockReturnValue(true),
   getHandlerNames: vi.fn().mockReturnValue(['create_workspace']),
   getHandler: vi.fn(),
@@ -104,7 +106,9 @@ describe('ToolService', () => {
   describe('Initialization', () => {
     it('should initialize with default tools', () => {
       expect(mockToolRegistry.register).toHaveBeenCalled();
-      expect(mockLogger.info).toHaveBeenCalledWith('Default tool handlers initialized successfully');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Default tool handlers initialized successfully'
+      );
     });
 
     it('should handle initialization errors', () => {
@@ -129,12 +133,14 @@ describe('ToolService', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.tools).toHaveLength(1);
-        expect(result.data.tools[0]?.name).toBe('create_workspace');
+        expect(result.value.tools).toHaveLength(1);
+        expect(result.value.tools[0]?.name).toBe('create_workspace');
       }
 
       expect(mockToolRegistry.listTools).toHaveBeenCalled();
-      expect(mockLogger.debug).toHaveBeenCalledWith('Listing all available tools from registry');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Listing all available tools from registry'
+      );
       expect(mockLogger.debug).toHaveBeenCalledWith(
         'Registry contains 1 registered tools',
         { toolNames: ['create_workspace'] }
@@ -183,10 +189,12 @@ describe('ToolService', () => {
 
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.content[0]?.text).toBe('Success');
+        expect(result.value.content[0]?.text).toBe('Success');
       }
 
-      expect(mockToolRegistry.hasHandler).toHaveBeenCalledWith('create_workspace');
+      expect(mockToolRegistry.hasHandler).toHaveBeenCalledWith(
+        'create_workspace'
+      );
       expect(mockToolRegistry.execute).toHaveBeenCalledWith(
         'create_workspace',
         { name: 'test' },
@@ -203,9 +211,16 @@ describe('ToolService', () => {
 
     it('should handle unknown tool error', async () => {
       vi.mocked(mockToolRegistry.hasHandler).mockReturnValue(false);
-      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue(['tool1', 'tool2']);
+      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue([
+        'tool1',
+        'tool2',
+      ]);
 
-      const result = await toolService.callTool('unknown-tool', {}, mockContext);
+      const result = await toolService.callTool(
+        'unknown-tool',
+        {},
+        mockContext
+      );
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -225,9 +240,15 @@ describe('ToolService', () => {
 
     it('should handle tool execution errors', async () => {
       const executionError = new Error('Tool failed');
-      vi.mocked(mockToolRegistry.execute).mockResolvedValue(Err(executionError));
+      vi.mocked(mockToolRegistry.execute).mockResolvedValue(
+        Err(executionError)
+      );
 
-      const result = await toolService.callTool('create_workspace', {}, mockContext);
+      const result = await toolService.callTool(
+        'create_workspace',
+        {},
+        mockContext
+      );
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -244,7 +265,9 @@ describe('ToolService', () => {
     });
 
     it('should handle missing context with warning', async () => {
-      const result = await toolService.callTool('create_workspace', { name: 'test' });
+      const result = await toolService.callTool('create_workspace', {
+        name: 'test',
+      });
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'No tool context provided, tool execution may fail'
@@ -253,9 +276,15 @@ describe('ToolService', () => {
     });
 
     it('should handle unexpected errors during execution', async () => {
-      vi.mocked(mockToolRegistry.execute).mockRejectedValue(new Error('Unexpected error'));
+      vi.mocked(mockToolRegistry.execute).mockRejectedValue(
+        new Error('Unexpected error')
+      );
 
-      const result = await toolService.callTool('create_workspace', {}, mockContext);
+      const result = await toolService.callTool(
+        'create_workspace',
+        {},
+        mockContext
+      );
 
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -274,11 +303,17 @@ describe('ToolService', () => {
     it('should handle non-Error exceptions', async () => {
       vi.mocked(mockToolRegistry.execute).mockRejectedValue('String error');
 
-      const result = await toolService.callTool('create_workspace', {}, mockContext);
+      const result = await toolService.callTool(
+        'create_workspace',
+        {},
+        mockContext
+      );
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toBe('Tool execution failed: String error');
+        expect(result.error.message).toBe(
+          'Tool execution failed: String error'
+        );
       }
     });
 
@@ -301,7 +336,9 @@ describe('ToolService', () => {
 
       expect(result.success).toBe(true);
       expect(mockToolRegistry.register).toHaveBeenCalledWith(mockHandler);
-      expect(mockLogger.info).toHaveBeenCalledWith('Tool handler registered: new-tool');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Tool handler registered: new-tool'
+      );
     });
 
     it('should handle registration errors', () => {
@@ -333,7 +370,9 @@ describe('ToolService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toBe('Tool registration failed: String error');
+        expect(result.error.message).toBe(
+          'Tool registration failed: String error'
+        );
       }
     });
   });
@@ -344,7 +383,9 @@ describe('ToolService', () => {
 
       expect(result.success).toBe(true);
       expect(mockToolRegistry.unregister).toHaveBeenCalledWith('test-tool');
-      expect(mockLogger.info).toHaveBeenCalledWith('Tool handler unregistered: test-tool');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Tool handler unregistered: test-tool'
+      );
     });
 
     it('should handle unregistration errors', () => {
@@ -374,14 +415,20 @@ describe('ToolService', () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toBe('Tool unregistration failed: String error');
+        expect(result.error.message).toBe(
+          'Tool unregistration failed: String error'
+        );
       }
     });
   });
 
   describe('getRegisteredTools', () => {
     it('should return list of registered tool names', () => {
-      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue(['tool1', 'tool2', 'tool3']);
+      vi.mocked(mockToolRegistry.getHandlerNames).mockReturnValue([
+        'tool1',
+        'tool2',
+        'tool3',
+      ]);
 
       const result = toolService.getRegisteredTools();
 
@@ -443,7 +490,11 @@ describe('ToolService', () => {
     });
 
     it('should handle context being null during tool execution', async () => {
-      const result = await toolService.callTool('create_workspace', {}, null as any);
+      const result = await toolService.callTool(
+        'create_workspace',
+        {},
+        null as any
+      );
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'No tool context provided, tool execution may fail'
@@ -469,7 +520,11 @@ describe('ToolService', () => {
       expect(listResult.success).toBe(true);
 
       // Execute tool
-      const executeResult = await toolService.callTool('workflow-tool', { message: 'test' }, mockContext);
+      const executeResult = await toolService.callTool(
+        'workflow-tool',
+        { message: 'test' },
+        mockContext
+      );
       expect(executeResult.success).toBe(true);
 
       // Unregister
@@ -487,9 +542,15 @@ describe('ToolService', () => {
         metadata: { tags: ['frontend', 'react'], priority: 'high' },
       };
 
-      vi.mocked(mockToolRegistry.execute).mockRejectedValue(new Error('Complex execution error'));
+      vi.mocked(mockToolRegistry.execute).mockRejectedValue(
+        new Error('Complex execution error')
+      );
 
-      const result = await toolService.callTool('create_workspace', complexArgs, mockContext);
+      const result = await toolService.callTool(
+        'create_workspace',
+        complexArgs,
+        mockContext
+      );
 
       expect(result.success).toBe(false);
       expect(mockLogger.error).toHaveBeenCalledWith(

@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import type { EventBus, Logger, ToolContext, ToolHandler } from '../../interfaces/services.js';
+import type {
+  EventBus,
+  Logger,
+  ToolContext,
+  ToolHandler,
+} from '../../interfaces/services.js';
 import { ToolRegistry } from '../../tools/registry.js';
-import { Ok, Err } from '../../utils/result.js';
+import { Err, Ok } from '../../utils/result.js';
 
 // Mock tool handler for testing
 const createMockToolHandler = (name: string = 'test-tool'): ToolHandler => ({
@@ -71,18 +76,18 @@ describe('ToolRegistry', () => {
   describe('Tool Registration', () => {
     it('should register a tool handler', () => {
       const handler = createMockToolHandler();
-      
+
       registry.register(handler);
-      
+
       expect(registry.hasHandler('test-tool')).toBe(true);
       expect(registry.getHandlerNames()).toContain('test-tool');
     });
 
     it('should prevent duplicate tool registration', () => {
       const handler = createMockToolHandler('duplicate-tool');
-      
+
       registry.register(handler);
-      
+
       expect(() => registry.register(handler)).toThrow(
         'Tool handler already registered: duplicate-tool'
       );
@@ -91,10 +96,10 @@ describe('ToolRegistry', () => {
     it('should register multiple different tools', () => {
       const handler1 = createMockToolHandler('tool-one');
       const handler2 = createMockToolHandler('tool-two');
-      
+
       registry.register(handler1);
       registry.register(handler2);
-      
+
       expect(registry.hasHandler('tool-one')).toBe(true);
       expect(registry.hasHandler('tool-two')).toBe(true);
       expect(registry.getHandlerNames()).toHaveLength(2);
@@ -104,10 +109,10 @@ describe('ToolRegistry', () => {
   describe('Tool Unregistration', () => {
     it('should unregister existing tool', () => {
       const handler = createMockToolHandler();
-      
+
       registry.register(handler);
       expect(registry.hasHandler('test-tool')).toBe(true);
-      
+
       registry.unregister('test-tool');
       expect(registry.hasHandler('test-tool')).toBe(false);
     });
@@ -127,9 +132,9 @@ describe('ToolRegistry', () => {
     it('should list registered tools with correct format', () => {
       const handler = createMockToolHandler('sample-tool');
       registry.register(handler);
-      
+
       const tools = registry.listTools();
-      
+
       expect(tools).toHaveLength(1);
       expect(tools[0]).toMatchObject({
         name: 'sample-tool',
@@ -141,10 +146,10 @@ describe('ToolRegistry', () => {
     it('should convert Zod schema to JSON schema', () => {
       const handler = createMockToolHandler();
       registry.register(handler);
-      
+
       const tools = registry.listTools();
       const tool = tools[0];
-      
+
       // JSON schema should have properties structure
       expect(tool?.inputSchema).toHaveProperty('type', 'object');
       expect(tool?.inputSchema).toHaveProperty('properties');
@@ -165,11 +170,11 @@ describe('ToolRegistry', () => {
         { message: 'Hello World', count: 5 },
         mockContext
       );
-      
+
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.content[0]?.text).toContain('Hello World');
-        expect(result.data.isError).toBe(false);
+        expect(result.value.content[0]?.text).toContain('Hello World');
+        expect(result.value.isError).toBe(false);
       }
     });
 
@@ -179,7 +184,7 @@ describe('ToolRegistry', () => {
         { message: 'test' },
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.message).toBe('Unknown tool: unknown-tool');
@@ -192,7 +197,7 @@ describe('ToolRegistry', () => {
         { message: 123 }, // Invalid: message should be string
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.message).toContain('Invalid arguments');
@@ -205,7 +210,7 @@ describe('ToolRegistry', () => {
         {}, // Missing required 'message' field
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.message).toContain('Invalid arguments');
@@ -215,13 +220,13 @@ describe('ToolRegistry', () => {
     it('should handle tool execution errors', async () => {
       const failingHandler = createFailingToolHandler();
       registry.register(failingHandler);
-      
+
       const result = await registry.execute(
         'failing-tool',
         { message: 'test' },
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.message).toBe('Tool execution failed');
@@ -229,12 +234,8 @@ describe('ToolRegistry', () => {
     });
 
     it('should emit events on successful execution', async () => {
-      await registry.execute(
-        'test-tool',
-        { message: 'test' },
-        mockContext
-      );
-      
+      await registry.execute('test-tool', { message: 'test' }, mockContext);
+
       expect(mockContext.eventBus.emit).toHaveBeenCalledWith(
         'tool.executed',
         expect.objectContaining({
@@ -250,13 +251,9 @@ describe('ToolRegistry', () => {
     it('should emit events on failed execution', async () => {
       const failingHandler = createFailingToolHandler();
       registry.register(failingHandler);
-      
-      await registry.execute(
-        'failing-tool',
-        { message: 'test' },
-        mockContext
-      );
-      
+
+      await registry.execute('failing-tool', { message: 'test' }, mockContext);
+
       expect(mockContext.eventBus.emit).toHaveBeenCalledWith(
         'tool.failed',
         expect.objectContaining({
@@ -271,12 +268,8 @@ describe('ToolRegistry', () => {
     });
 
     it('should emit events on validation failure', async () => {
-      await registry.execute(
-        'test-tool',
-        { invalid: 'args' },
-        mockContext
-      );
-      
+      await registry.execute('test-tool', { invalid: 'args' }, mockContext);
+
       expect(mockContext.eventBus.emit).toHaveBeenCalledWith(
         'tool.failed',
         expect.objectContaining({
@@ -294,19 +287,19 @@ describe('ToolRegistry', () => {
   describe('Tool Management', () => {
     it('should check if handler exists', () => {
       expect(registry.hasHandler('non-existent')).toBe(false);
-      
+
       const handler = createMockToolHandler('exists-tool');
       registry.register(handler);
-      
+
       expect(registry.hasHandler('exists-tool')).toBe(true);
     });
 
     it('should get handler names', () => {
       expect(registry.getHandlerNames()).toHaveLength(0);
-      
+
       registry.register(createMockToolHandler('tool-a'));
       registry.register(createMockToolHandler('tool-b'));
-      
+
       const names = registry.getHandlerNames();
       expect(names).toHaveLength(2);
       expect(names).toContain('tool-a');
@@ -316,10 +309,10 @@ describe('ToolRegistry', () => {
     it('should get specific handler', () => {
       const handler = createMockToolHandler('specific-tool');
       registry.register(handler);
-      
+
       const retrieved = registry.getHandler('specific-tool');
       expect(retrieved).toBe(handler);
-      
+
       const notFound = registry.getHandler('not-found');
       expect(notFound).toBeUndefined();
     });
@@ -327,11 +320,11 @@ describe('ToolRegistry', () => {
     it('should clear all handlers', () => {
       registry.register(createMockToolHandler('tool-1'));
       registry.register(createMockToolHandler('tool-2'));
-      
+
       expect(registry.getHandlerNames()).toHaveLength(2);
-      
+
       registry.clear();
-      
+
       expect(registry.getHandlerNames()).toHaveLength(0);
       expect(registry.hasHandler('tool-1')).toBe(false);
       expect(registry.hasHandler('tool-2')).toBe(false);
@@ -342,45 +335,45 @@ describe('ToolRegistry', () => {
     it('should handle event emission errors gracefully', async () => {
       const handler = createMockToolHandler();
       registry.register(handler);
-      
+
       // Mock event bus to throw error
       vi.mocked(mockContext.eventBus.emit).mockRejectedValue(
         new Error('Event emission failed')
       );
-      
+
       // Tool execution should still succeed even if event emission fails
       const result = await registry.execute(
         'test-tool',
         { message: 'test' },
         mockContext
       );
-      
+
       expect(result.success).toBe(true);
     });
 
     it('should handle malformed input gracefully', async () => {
       const handler = createMockToolHandler();
       registry.register(handler);
-      
+
       const result = await registry.execute(
         'test-tool',
         null, // Malformed input
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
     });
 
     it('should handle undefined arguments', async () => {
       const handler = createMockToolHandler();
       registry.register(handler);
-      
+
       const result = await registry.execute(
         'test-tool',
         undefined,
         mockContext
       );
-      
+
       expect(result.success).toBe(false);
     });
   });
@@ -389,13 +382,9 @@ describe('ToolRegistry', () => {
     it('should measure execution time', async () => {
       const handler = createMockToolHandler();
       registry.register(handler);
-      
-      await registry.execute(
-        'test-tool',
-        { message: 'test' },
-        mockContext
-      );
-      
+
+      await registry.execute('test-tool', { message: 'test' }, mockContext);
+
       // Check that event was emitted with execution time
       expect(mockContext.eventBus.emit).toHaveBeenCalledWith(
         'tool.executed',
@@ -407,7 +396,7 @@ describe('ToolRegistry', () => {
 
     it('should log tool registration', () => {
       const handler = createMockToolHandler('logged-tool');
-      
+
       // The registry creates its own logger, so we can't directly mock it
       // but we can verify no errors are thrown during registration
       expect(() => registry.register(handler)).not.toThrow();
