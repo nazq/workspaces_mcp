@@ -10,6 +10,7 @@ export class AsyncEventBus implements EventBus {
   private emitter: EventEmitter;
   private logger: Logger;
   // Map to track wrapped handlers for proper removal
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private handlerMap = new WeakMap<EventHandler<any>, EventHandler<any>>();
 
   constructor(logger?: Logger) {
@@ -98,6 +99,7 @@ export class AsyncEventBus implements EventBus {
     this.emitter.once(event, wrappedHandler);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   off(event: string, handler?: EventHandler<any>): void {
     if (!handler) {
       // Remove all handlers for event
