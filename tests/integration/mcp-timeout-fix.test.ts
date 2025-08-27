@@ -4,6 +4,26 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+// Helper function to poll for server readiness
+async function waitForServerReady(logFile: string, maxWaitMs = 2000): Promise<void> {
+  const pollInterval = 100;
+  const maxAttempts = Math.ceil(maxWaitMs / pollInterval);
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const content = await fs.readFile(logFile, 'utf-8');
+      if (content.includes('🚀 Starting Workspaces MCP Server')) {
+        return;
+      }
+    } catch {
+      // File doesn't exist yet, continue polling
+    }
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+  }
+  
+  throw new Error(`Server not ready within ${maxWaitMs}ms`);
+}
+
 describe('MCP Server Timeout Fix', () => {
   let mcpServer: ChildProcess;
   let tempDir: string;
@@ -46,8 +66,9 @@ describe('MCP Server Timeout Fix', () => {
       console.log(`SERVER EXITED: code=${code}, signal=${signal}`);
     });
 
-    // Wait longer for server to initialize
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait for server to initialize by polling log file
+    const logFile = path.join(tempDir, 'workspace_mcp.log');
+    await waitForServerReady(logFile, 3000);
   });
 
   afterAll(async () => {
@@ -92,11 +113,11 @@ describe('MCP Server Timeout Fix', () => {
       id: 1,
     };
 
-    // Send initialize request with increased timeout
+    // Send initialize request with reasonable timeout
     const response = await new Promise<any>((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error('Initialize request timeout'));
-      }, 10000); // 10 second timeout
+      }, 3000); // 3 second timeout should be plenty
 
       let responseData = '';
 

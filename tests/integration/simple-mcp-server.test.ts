@@ -4,6 +4,27 @@ import path from 'node:path';
 import fs from 'fs-extra';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+// Helper function to poll for server readiness by checking stdout
+async function waitForServerOutput(server: ChildProcess, expectedString: string, maxWaitMs = 2000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error(`Server output not found within ${maxWaitMs}ms`));
+    }, maxWaitMs);
+
+    let outputBuffer = '';
+    const dataHandler = (data: Buffer) => {
+      outputBuffer += data.toString();
+      if (outputBuffer.includes(expectedString)) {
+        clearTimeout(timeout);
+        server.stdout?.off('data', dataHandler);
+        resolve();
+      }
+    };
+
+    server.stdout?.on('data', dataHandler);
+  });
+}
+
 describe('Simple MCP Server Test', () => {
   let mcpServer: ChildProcess;
   let tempDir: string;
@@ -40,8 +61,13 @@ describe('Simple MCP Server Test', () => {
       console.log(`SERVER EXITED: code=${code}, signal=${signal}`);
     });
 
-    // Wait for server to initialize
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    // Wait for server to initialize by checking for any stdout output
+    try {
+      await waitForServerOutput(mcpServer, '', 3000); // Wait for any output
+    } catch {
+      // If no output, just wait a short time as fallback
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
   });
 
   afterAll(async () => {
@@ -89,7 +115,7 @@ describe('Simple MCP Server Test', () => {
     const response = await new Promise<any>((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error('Initialize request timeout'));
-      }, 5000);
+      }, 2000);
 
       let responseData = '';
 

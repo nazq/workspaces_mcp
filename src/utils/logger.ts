@@ -87,14 +87,31 @@ export const pinoConfig = {
 
 // Export main logger with compatible interface
 export const logger = {
-  debug: (message: string, ...args: any[]) =>
-    rootLogger.debug(message, ...args),
-  info: (message: string, ...args: any[]) => rootLogger.info(message, ...args),
-  warn: (message: string, ...args: any[]) => rootLogger.warn(message, ...args),
-  error: (message: string, ...args: any[]) =>
-    rootLogger.error(message, ...args),
-  fatal: (message: string, ...args: any[]) =>
-    rootLogger.fatal(message, ...args),
+  debug: (message: string, ...args: unknown[]) =>
+    (rootLogger.debug as (msg: string, ...args: unknown[]) => void)(
+      message,
+      ...args
+    ),
+  info: (message: string, ...args: unknown[]) =>
+    (rootLogger.info as (msg: string, ...args: unknown[]) => void)(
+      message,
+      ...args
+    ),
+  warn: (message: string, ...args: unknown[]) =>
+    (rootLogger.warn as (msg: string, ...args: unknown[]) => void)(
+      message,
+      ...args
+    ),
+  error: (message: string, ...args: unknown[]) =>
+    (rootLogger.error as (msg: string, ...args: unknown[]) => void)(
+      message,
+      ...args
+    ),
+  fatal: (message: string, ...args: unknown[]) =>
+    (rootLogger.fatal as (msg: string, ...args: unknown[]) => void)(
+      message,
+      ...args
+    ),
 };
 
 // Helper function to format component names for better readability
@@ -121,16 +138,31 @@ export const createChildLogger = (name: string) => {
   const childLogger = rootLogger.child({ component: formattedName });
 
   return {
-    debug: (message: string, ...args: any[]) =>
-      childLogger.debug(message, ...args),
-    info: (message: string, ...args: any[]) =>
-      childLogger.info(message, ...args),
-    warn: (message: string, ...args: any[]) =>
-      childLogger.warn(message, ...args),
-    error: (message: string, ...args: any[]) =>
-      childLogger.error(message, ...args),
-    fatal: (message: string, ...args: any[]) =>
-      childLogger.fatal(message, ...args),
+    debug: (message: string, ...args: unknown[]) =>
+      (childLogger.debug as (msg: string, ...args: unknown[]) => void)(
+        message,
+        ...args
+      ),
+    info: (message: string, ...args: unknown[]) =>
+      (childLogger.info as (msg: string, ...args: unknown[]) => void)(
+        message,
+        ...args
+      ),
+    warn: (message: string, ...args: unknown[]) =>
+      (childLogger.warn as (msg: string, ...args: unknown[]) => void)(
+        message,
+        ...args
+      ),
+    error: (message: string, ...args: unknown[]) =>
+      (childLogger.error as (msg: string, ...args: unknown[]) => void)(
+        message,
+        ...args
+      ),
+    fatal: (message: string, ...args: unknown[]) =>
+      (childLogger.fatal as (msg: string, ...args: unknown[]) => void)(
+        message,
+        ...args
+      ),
   };
 };
 

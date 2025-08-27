@@ -8,12 +8,9 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { ToolService } from '../../../../interfaces/services.js';
 import { CallToolController } from '../../../../layers/controllers/tools/call-controller.js';
-
-// Mock ToolService
-interface ToolService {
-  callTool(name: string, arguments_: unknown): Promise<CallToolResult>;
-}
+import { Ok } from '../../../../utils/result.js';
 
 const mockToolService: ToolService = {
   callTool: vi.fn(),
@@ -43,7 +40,7 @@ describe('CallToolController', () => {
         ],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(mockResult);
+      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -78,7 +75,7 @@ describe('CallToolController', () => {
         ],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(mockResult);
+      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -119,7 +116,7 @@ describe('CallToolController', () => {
         },
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(mockResult);
+      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -180,7 +177,7 @@ describe('CallToolController', () => {
         content: [{ type: 'text', text: 'Handled undefined args' }],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(mockResult);
+      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -207,7 +204,7 @@ describe('CallToolController', () => {
         ],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(mockResult);
+      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -234,7 +231,7 @@ describe('CallToolController', () => {
         ],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(originalResult);
+      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(originalResult));
 
       const request: CallToolRequest = {
         params: {

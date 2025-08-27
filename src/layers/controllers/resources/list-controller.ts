@@ -4,12 +4,9 @@ import type {
   ListResourcesResult,
 } from '@modelcontextprotocol/sdk/types.js';
 
+import type { ResourceService } from '../../../interfaces/services.js';
+import { getError, getValue, isErr } from '../../../utils/result.js';
 import { BaseController } from '../base.js';
-
-// Forward declaration - will be defined in services layer
-interface ResourceService {
-  listResources(): Promise<ListResourcesResult>;
-}
 
 export class ListResourcesController extends BaseController<'resources/list'> {
   readonly method = 'resources/list' as const;
@@ -21,13 +18,14 @@ export class ListResourcesController extends BaseController<'resources/list'> {
   async handle(_request: ListResourcesRequest): Promise<ListResourcesResult> {
     this.logger.debug('Handling resources/list request');
 
-    try {
-      const result = await this.resourceService.listResources();
+    const result = await this.resourceService.listResources();
 
-      this.logger.debug(`Listed ${result.resources.length} resources`);
-      return result;
-    } catch (error) {
-      this.handleError(error, 'Failed to list resources');
+    if (isErr(result)) {
+      this.handleError(getError(result), 'Failed to list resources');
     }
+
+    const resources = getValue(result);
+    this.logger.debug(`Listed ${resources.resources.length} resources`);
+    return resources;
   }
 }

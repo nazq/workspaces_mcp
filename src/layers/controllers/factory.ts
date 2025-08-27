@@ -1,11 +1,8 @@
 // Controller Factory with Dependency Injection
 import type {
-  CallToolResult,
-  ListResourcesResult,
-  ListToolsResult,
-  ReadResourceResult,
-} from '@modelcontextprotocol/sdk/types.js';
-
+  ResourceService,
+  ToolService,
+} from '../../interfaces/services.js';
 import { createChildLogger } from '../../utils/logger.js';
 import type { AnyMcpHandler } from '../protocol/index.js';
 
@@ -13,17 +10,6 @@ import { ListResourcesController } from './resources/list-controller.js';
 import { ReadResourceController } from './resources/read-controller.js';
 import { CallToolController } from './tools/call-controller.js';
 import { ListToolsController } from './tools/list-controller.js';
-
-// Service interfaces (will be implemented in services layer)
-interface ResourceService {
-  listResources(): Promise<ListResourcesResult>;
-  readResource(uri: string): Promise<ReadResourceResult>;
-}
-
-interface ToolService {
-  listTools(): Promise<ListToolsResult>;
-  callTool(name: string, arguments_: unknown): Promise<CallToolResult>;
-}
 
 export interface ControllerDependencies {
   resourceService: ResourceService;

@@ -15,6 +15,30 @@ const TEST_WORKSPACES_ROOT = join(
   '../../../tmp/test-server-workspaces'
 );
 
+// Helper function to poll for log content efficiently
+async function waitForLogContent(
+  logFile: string,
+  expectedStrings: string[],
+  maxWaitMs = 2000
+): Promise<string> {
+  const pollInterval = 100;
+  const maxAttempts = Math.ceil(maxWaitMs / pollInterval);
+
+  for (let i = 0; i < maxAttempts; i++) {
+    if (await fs.pathExists(logFile)) {
+      const content = await fs.readFile(logFile, 'utf-8');
+      if (expectedStrings.every((str) => content.includes(str))) {
+        return content;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+  }
+
+  throw new Error(
+    `Log content not found within ${maxWaitMs}ms. Expected: ${expectedStrings.join(', ')}`
+  );
+}
+
 describe('Server Binary Entry Point', () => {
   beforeEach(async () => {
     // Clean up test directory
@@ -53,43 +77,68 @@ describe('Server Binary Entry Point', () => {
         stderr += data.toString();
       });
 
-      // Give server time to start up
-      setTimeout(() => {
-        child.kill('SIGTERM');
-      }, 2000);
+      const logFile = join(TEST_WORKSPACES_ROOT, 'workspace_mcp.log');
 
-      const result = await new Promise<{
+      // Poll for log file with expected content instead of fixed timeout
+      const pollForLogs = async (): Promise<string> => {
+        for (let i = 0; i < 20; i++) {
+          // Max 2 seconds (20 * 100ms)
+          if (await fs.pathExists(logFile)) {
+            const content = await fs.readFile(logFile, 'utf-8');
+            if (
+              content.includes('Starting') &&
+              content.includes('Workspaces root:') &&
+              content.includes('Log level:')
+            ) {
+              return content;
+            }
+          }
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+        throw new Error('Server logs not found within timeout');
+      };
+
+      let logContent: string;
+      let result: {
         code: number | null;
         signal: NodeJS.Signals | null;
         stdout: string;
         stderr: string;
-      }>((resolve, reject) => {
-        child.on('close', (code, signal) => {
-          resolve({ code, signal, stdout, stderr });
+      };
+
+      try {
+        // Wait for logs to appear
+        logContent = await pollForLogs();
+
+        // Kill server once we have the logs we need
+        child.kill('SIGTERM');
+
+        // Wait for clean shutdown
+        result = await new Promise<{
+          code: number | null;
+          signal: NodeJS.Signals | null;
+          stdout: string;
+          stderr: string;
+        }>((resolve, reject) => {
+          child.on('close', (code, signal) => {
+            resolve({ code, signal, stdout, stderr });
+          });
+
+          child.on('error', (error) => {
+            reject(error);
+          });
+
+          setTimeout(() => {
+            child.kill('SIGKILL');
+            reject(new Error('Server shutdown timed out'));
+          }, 2000);
         });
-
-        child.on('error', (error) => {
-          reject(error);
-        });
-
-        setTimeout(() => {
-          child.kill('SIGKILL');
-          reject(new Error('Server startup test timed out'));
-        }, 10000);
-      });
-
-      // Read from log file instead of stdout/stderr since we use file-based logging
-      const logFile = join(TEST_WORKSPACES_ROOT, 'workspace_mcp.log');
-
-      // Wait a bit for log file to be written
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      let logContent = '';
-      if (await fs.pathExists(logFile)) {
-        logContent = await fs.readFile(logFile, 'utf-8');
+      } catch (error) {
+        child.kill('SIGKILL');
+        throw error;
       }
 
-      // Should log startup messages to file
+      // Verify log content
       expect(logContent).toMatch(/Starting.*MCP Server/);
       expect(logContent).toMatch(/Workspaces root:/);
       expect(logContent).toMatch(/Log level:/);
@@ -178,39 +227,55 @@ describe('Server Binary Entry Point', () => {
         stderr += data.toString();
       });
 
-      setTimeout(() => {
-        child.kill('SIGTERM');
-      }, 2000);
-
-      await new Promise<void>((resolve, reject) => {
-        child.on('close', () => {
-          resolve();
-        });
-
-        child.on('error', (error) => {
-          reject(error);
-        });
-
-        setTimeout(() => {
-          child.kill('SIGKILL');
-          reject(new Error('Log level test timed out'));
-        }, 8000);
-      });
-
-      // Read from log file instead of stdout/stderr
       const logFile = join(TEST_WORKSPACES_ROOT, 'workspace_mcp.log');
 
-      // Wait a bit for log file to be written
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      let logContent: string;
+      let result: {
+        code: number | null;
+        signal: NodeJS.Signals | null;
+        stdout: string;
+        stderr: string;
+      };
 
-      let logContent = '';
-      if (await fs.pathExists(logFile)) {
-        logContent = await fs.readFile(logFile, 'utf-8');
+      try {
+        // Wait for log file with debug level content
+        logContent = await waitForLogContent(logFile, [
+          'Starting',
+          'Log level:',
+          'debug',
+        ]);
+
+        // Kill server once we have the logs we need
+        child.kill('SIGTERM');
+
+        // Wait for clean shutdown
+        result = await new Promise<{
+          code: number | null;
+          signal: NodeJS.Signals | null;
+          stdout: string;
+          stderr: string;
+        }>((resolve, reject) => {
+          child.on('close', (code, signal) => {
+            resolve({ code, signal, stdout, stderr });
+          });
+
+          child.on('error', (error) => {
+            reject(error);
+          });
+
+          setTimeout(() => {
+            child.kill('SIGKILL');
+            reject(new Error('Server shutdown timed out'));
+          }, 2000);
+        });
+      } catch (error) {
+        child.kill('SIGKILL');
+        throw error;
       }
 
       // Should show the log level in log file
       expect(logContent).toMatch(/Log level:.*debug/);
-    }, 12000);
+    }, 8000);
 
     it('should default log level when not specified', async () => {
       const envWithoutLogLevel = { ...process.env };
@@ -235,39 +300,55 @@ describe('Server Binary Entry Point', () => {
         stderr += data.toString();
       });
 
-      setTimeout(() => {
-        child.kill('SIGTERM');
-      }, 2000);
-
-      await new Promise<void>((resolve, reject) => {
-        child.on('close', () => {
-          resolve();
-        });
-
-        child.on('error', (error) => {
-          reject(error);
-        });
-
-        setTimeout(() => {
-          child.kill('SIGKILL');
-          reject(new Error('Default log level test timed out'));
-        }, 8000);
-      });
-
-      // Read from log file instead of stdout/stderr
       const logFile = join(TEST_WORKSPACES_ROOT, 'workspace_mcp.log');
 
-      // Wait a bit for log file to be written
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      let logContent: string;
+      let result: {
+        code: number | null;
+        signal: NodeJS.Signals | null;
+        stdout: string;
+        stderr: string;
+      };
 
-      let logContent = '';
-      if (await fs.pathExists(logFile)) {
-        logContent = await fs.readFile(logFile, 'utf-8');
+      try {
+        // Wait for log file with default level content
+        logContent = await waitForLogContent(logFile, [
+          'Starting',
+          'Log level:',
+          'info',
+        ]);
+
+        // Kill server once we have the logs we need
+        child.kill('SIGTERM');
+
+        // Wait for clean shutdown
+        result = await new Promise<{
+          code: number | null;
+          signal: NodeJS.Signals | null;
+          stdout: string;
+          stderr: string;
+        }>((resolve, reject) => {
+          child.on('close', (code, signal) => {
+            resolve({ code, signal, stdout, stderr });
+          });
+
+          child.on('error', (error) => {
+            reject(error);
+          });
+
+          setTimeout(() => {
+            child.kill('SIGKILL');
+            reject(new Error('Server shutdown timed out'));
+          }, 2000);
+        });
+      } catch (error) {
+        child.kill('SIGKILL');
+        throw error;
       }
 
       // Should default to 'info' log level in log file
       expect(logContent).toMatch(/Log level:.*info/);
-    }, 12000);
+    }, 8000);
   });
 
   describe('Process Signal Handling', () => {
@@ -280,10 +361,18 @@ describe('Server Binary Entry Point', () => {
         stdio: 'pipe',
       });
 
-      // Give server time to start
-      setTimeout(() => {
+      const logFile = join(TEST_WORKSPACES_ROOT, 'workspace_mcp.log');
+
+      try {
+        // Wait for server to start up (indicated by log file creation)
+        await waitForLogContent(logFile, ['Starting'], 2000);
+
+        // Now send SIGTERM
         child.kill('SIGTERM');
-      }, 1000);
+      } catch (error) {
+        child.kill('SIGKILL');
+        throw error;
+      }
 
       const result = await new Promise<{
         code: number | null;
@@ -300,11 +389,11 @@ describe('Server Binary Entry Point', () => {
         setTimeout(() => {
           child.kill('SIGKILL');
           reject(new Error('SIGTERM handling test timed out'));
-        }, 5000);
+        }, 3000);
       });
 
       expect(result.signal).toBe('SIGTERM');
-    }, 8000);
+    }, 6000);
 
     it('should handle SIGINT gracefully', async () => {
       const child = spawn('npx', ['tsx', SERVER_PATH], {
@@ -315,10 +404,18 @@ describe('Server Binary Entry Point', () => {
         stdio: 'pipe',
       });
 
-      // Give server time to start
-      setTimeout(() => {
+      const logFile = join(TEST_WORKSPACES_ROOT, 'workspace_mcp.log');
+
+      try {
+        // Wait for server to start up (indicated by log file creation)
+        await waitForLogContent(logFile, ['Starting'], 2000);
+
+        // Now send SIGINT
         child.kill('SIGINT');
-      }, 1000);
+      } catch (error) {
+        child.kill('SIGKILL');
+        throw error;
+      }
 
       const result = await new Promise<{
         code: number | null;
@@ -336,7 +433,7 @@ describe('Server Binary Entry Point', () => {
           child.kill('SIGKILL');
           // Signal handling behavior can vary by platform, accept different outcomes
           setTimeout(() => resolve({ code: null, signal: null }), 100);
-        }, 3000);
+        }, 2000);
       });
 
       // Signal handling can vary by platform - accept SIGINT, SIGKILL, or process termination
@@ -345,7 +442,7 @@ describe('Server Binary Entry Point', () => {
           result.signal === 'SIGKILL' ||
           typeof result.code === 'number'
       ).toBe(true);
-    }, 8000);
+    }, 5000);
   });
 
   describe('Configuration Validation', () => {
@@ -369,49 +466,60 @@ describe('Server Binary Entry Point', () => {
         stderr += data.toString();
       });
 
-      setTimeout(() => {
-        child.kill('SIGTERM');
-      }, 2000);
-
-      await new Promise<void>((resolve, reject) => {
-        child.on('close', () => {
-          resolve();
-        });
-
-        child.on('error', (error) => {
-          reject(error);
-        });
-
-        setTimeout(() => {
-          child.kill('SIGKILL');
-          reject(new Error('Default workspace root test timed out'));
-        }, 8000);
-      });
-
-      // Read from log file instead of stdout/stderr
       // Note: This test uses default workspace root so log will be in home directory
       const defaultPath = require('os').homedir() + '/workspaces';
       const logFile = defaultPath + '/workspace_mcp.log';
 
-      // Wait a bit for log file to be written
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      let logContent: string;
+      let result: {
+        code: number | null;
+        signal: NodeJS.Signals | null;
+        stdout: string;
+        stderr: string;
+      };
 
-      let logContent = '';
-      if (await fs.pathExists(logFile)) {
-        logContent = await fs.readFile(logFile, 'utf-8');
-      }
+      try {
+        // Wait for log file with default workspace root content
+        logContent = await waitForLogContent(logFile, [
+          'Starting',
+          'Workspaces root:',
+        ]);
 
-      // Should show some default workspace root path in log file or log file may not exist for default path
-      if (logContent) {
-        expect(logContent).toMatch(/Workspaces root:.*\/.*workspaces/);
-      } else {
-        // If no log file exists, the server might not have started or failed to create default workspace
-        // This is acceptable behavior for this test
+        // Kill server once we have the logs we need
+        child.kill('SIGTERM');
+
+        // Wait for clean shutdown
+        result = await new Promise<{
+          code: number | null;
+          signal: NodeJS.Signals | null;
+          stdout: string;
+          stderr: string;
+        }>((resolve, reject) => {
+          child.on('close', (code, signal) => {
+            resolve({ code, signal, stdout, stderr });
+          });
+
+          child.on('error', (error) => {
+            reject(error);
+          });
+
+          setTimeout(() => {
+            child.kill('SIGKILL');
+            reject(new Error('Server shutdown timed out'));
+          }, 2000);
+        });
+      } catch (error) {
+        child.kill('SIGKILL');
+        // If log file doesn't exist at default path, that's acceptable
         console.log(
           'Log file not found at default path - server may not have created default workspace'
         );
+        return; // Skip assertions if default workspace creation fails
       }
-    }, 12000);
+
+      // Should show some default workspace root path in log file
+      expect(logContent).toMatch(/Workspaces root:.*\/.*workspaces/);
+    }, 8000);
   });
 
   describe('MCP Server Integration', () => {
@@ -436,34 +544,50 @@ describe('Server Binary Entry Point', () => {
         stderr += data.toString();
       });
 
-      setTimeout(() => {
-        child.kill('SIGTERM');
-      }, 3000);
-
-      await new Promise<void>((resolve, reject) => {
-        child.on('close', () => {
-          resolve();
-        });
-
-        child.on('error', (error) => {
-          reject(error);
-        });
-
-        setTimeout(() => {
-          child.kill('SIGKILL');
-          reject(new Error('MCP server integration test timed out'));
-        }, 10000);
-      });
-
-      // Read from log file instead of stdout/stderr
       const logFile = join(TEST_WORKSPACES_ROOT, 'workspace_mcp.log');
 
-      // Wait a bit for log file to be written
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      let logContent: string;
+      let result: {
+        code: number | null;
+        signal: NodeJS.Signals | null;
+        stdout: string;
+        stderr: string;
+      };
 
-      let logContent = '';
-      if (await fs.pathExists(logFile)) {
-        logContent = await fs.readFile(logFile, 'utf-8');
+      try {
+        // Wait for log file with MCP server startup content
+        logContent = await waitForLogContent(
+          logFile,
+          ['Starting', 'MCP Server'],
+          3000 // Allow slightly longer for full server setup
+        );
+
+        // Kill server once we have the logs we need
+        child.kill('SIGTERM');
+
+        // Wait for clean shutdown
+        result = await new Promise<{
+          code: number | null;
+          signal: NodeJS.Signals | null;
+          stdout: string;
+          stderr: string;
+        }>((resolve, reject) => {
+          child.on('close', (code, signal) => {
+            resolve({ code, signal, stdout, stderr });
+          });
+
+          child.on('error', (error) => {
+            reject(error);
+          });
+
+          setTimeout(() => {
+            child.kill('SIGKILL');
+            reject(new Error('Server shutdown timed out'));
+          }, 2000);
+        });
+      } catch (error) {
+        child.kill('SIGKILL');
+        throw error;
       }
 
       // Should start the server (check log file)
@@ -472,6 +596,6 @@ describe('Server Binary Entry Point', () => {
       // Should not have initialization errors in log file
       expect(logContent).not.toMatch(/Failed to create.*server/);
       expect(logContent).not.toMatch(/Invalid configuration/);
-    }, 15000);
+    }, 10000);
   });
 });

@@ -158,8 +158,8 @@ export class WorkspacesMcpServer {
       // Layer 3: Controllers Layer (for future protocol processor integration)
       logger.debug('Creating controllers...');
       const controllers = ControllerFactory.createAll({
-        resourceService: resourceService as any,
-        toolService: toolService as any,
+        resourceService,
+        toolService,
       });
       logger.debug(`Created ${controllers.length} controllers`);
 

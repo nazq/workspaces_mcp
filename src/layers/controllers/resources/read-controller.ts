@@ -4,12 +4,9 @@ import type {
   ReadResourceResult,
 } from '@modelcontextprotocol/sdk/types.js';
 
+import type { ResourceService } from '../../../interfaces/services.js';
+import { getError, getValue, isErr } from '../../../utils/result.js';
 import { BaseController } from '../base.js';
-
-// Forward declaration - will be defined in services layer
-interface ResourceService {
-  readResource(uri: string): Promise<ReadResourceResult>;
-}
 
 export class ReadResourceController extends BaseController<'resources/read'> {
   readonly method = 'resources/read' as const;
@@ -22,13 +19,14 @@ export class ReadResourceController extends BaseController<'resources/read'> {
     const { uri } = request.params;
     this.logger.debug(`Handling resources/read request for URI: ${uri}`);
 
-    try {
-      const result = await this.resourceService.readResource(uri);
+    const result = await this.resourceService.readResource(uri);
 
-      this.logger.debug(`Successfully read resource: ${uri}`);
-      return result;
-    } catch (error) {
-      this.handleError(error, `Failed to read resource: ${uri}`);
+    if (isErr(result)) {
+      this.handleError(getError(result), `Failed to read resource: ${uri}`);
     }
+
+    const resource = getValue(result);
+    this.logger.debug(`Successfully read resource: ${uri}`);
+    return resource;
   }
 }

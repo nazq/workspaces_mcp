@@ -6,12 +6,16 @@ import { EventEmitter } from 'eventemitter3';
 import type { EventBus, EventHandler, Logger } from '../interfaces/services.js';
 import { createChildLogger } from '../utils/logger.js';
 
+import type { EventMap } from './events.js';
+
 export class AsyncEventBus implements EventBus {
   private emitter: EventEmitter;
   private logger: Logger;
   // Map to track wrapped handlers for proper removal
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private handlerMap = new WeakMap<EventHandler<any>, EventHandler<any>>();
+  private handlerMap = new WeakMap<
+    EventHandler<EventMap[keyof EventMap]>,
+    EventHandler<EventMap[keyof EventMap]>
+  >();
 
   constructor(logger?: Logger) {
     this.emitter = new EventEmitter();
@@ -58,7 +62,10 @@ export class AsyncEventBus implements EventBus {
     };
 
     // Store mapping for proper removal
-    this.handlerMap.set(handler, wrappedHandler);
+    this.handlerMap.set(
+      handler as EventHandler<EventMap[keyof EventMap]>,
+      wrappedHandler as EventHandler<EventMap[keyof EventMap]>
+    );
 
     this.emitter.on(event, wrappedHandler);
 
@@ -70,7 +77,7 @@ export class AsyncEventBus implements EventBus {
     // Return unsubscribe function
     return () => {
       this.emitter.off(event, wrappedHandler);
-      this.handlerMap.delete(handler);
+      this.handlerMap.delete(handler as EventHandler<EventMap[keyof EventMap]>);
       const remainingCount = this.emitter.listenerCount(event);
       this.logger.debug(
         `Handler unregistered for event: ${event} (${remainingCount} remaining)`
@@ -89,18 +96,22 @@ export class AsyncEventBus implements EventBus {
         );
       } finally {
         // Clean up mapping after one-time execution
-        this.handlerMap.delete(handler);
+        this.handlerMap.delete(
+          handler as EventHandler<EventMap[keyof EventMap]>
+        );
       }
     };
 
     // Store mapping for proper removal
-    this.handlerMap.set(handler, wrappedHandler);
+    this.handlerMap.set(
+      handler as EventHandler<EventMap[keyof EventMap]>,
+      wrappedHandler as EventHandler<EventMap[keyof EventMap]>
+    );
 
     this.emitter.once(event, wrappedHandler);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  off(event: string, handler?: EventHandler<any>): void {
+  off(event: string, handler?: EventHandler): void {
     if (!handler) {
       // Remove all handlers for event
       this.emitter.removeAllListeners(event);
@@ -109,10 +120,12 @@ export class AsyncEventBus implements EventBus {
     }
 
     // Find the wrapped handler if it exists
-    const wrappedHandler = this.handlerMap.get(handler);
+    const wrappedHandler = this.handlerMap.get(
+      handler as EventHandler<EventMap[keyof EventMap]>
+    );
     if (wrappedHandler) {
       this.emitter.off(event, wrappedHandler);
-      this.handlerMap.delete(handler);
+      this.handlerMap.delete(handler as EventHandler<EventMap[keyof EventMap]>);
     } else {
       // Fallback to original handler (shouldn't happen with proper usage)
       this.emitter.off(event, handler);

@@ -4,12 +4,9 @@ import type {
   CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js';
 
+import type { ToolService } from '../../../interfaces/services.js';
+import { getError, getValue, isErr } from '../../../utils/result.js';
 import { BaseController } from '../base.js';
-
-// Forward declaration - will be defined in services layer
-interface ToolService {
-  callTool(name: string, arguments_: unknown): Promise<CallToolResult>;
-}
 
 export class CallToolController extends BaseController<'tools/call'> {
   readonly method = 'tools/call' as const;
@@ -22,13 +19,14 @@ export class CallToolController extends BaseController<'tools/call'> {
     const { name, arguments: args } = request.params;
     this.logger.info(`Handling tools/call request for tool: ${name}`);
 
-    try {
-      const result = await this.toolService.callTool(name, args);
+    const result = await this.toolService.callTool(name, args);
 
-      this.logger.info(`Successfully executed tool: ${name}`);
-      return result;
-    } catch (error) {
-      this.handleError(error, `Failed to execute tool: ${name}`);
+    if (isErr(result)) {
+      this.handleError(getError(result), `Failed to execute tool: ${name}`);
     }
+
+    const toolResult = getValue(result);
+    this.logger.info(`Successfully executed tool: ${name}`);
+    return toolResult;
   }
 }

@@ -179,10 +179,31 @@ export interface FileSystemService {
 
 // Event System Interfaces
 export interface EventBus {
+  // Method overloads for type-safe event handling
+  emit<K extends keyof import('../events/events.js').EventMap>(
+    event: K,
+    data: import('../events/events.js').EventMap[K]
+  ): Promise<void>;
   emit<T = unknown>(event: string, data: T): Promise<void>;
+
+  on<K extends keyof import('../events/events.js').EventMap>(
+    event: K,
+    handler: EventHandler<import('../events/events.js').EventMap[K]>
+  ): () => void;
   on<T = unknown>(event: string, handler: EventHandler<T>): () => void;
+
+  once<K extends keyof import('../events/events.js').EventMap>(
+    event: K,
+    handler: EventHandler<import('../events/events.js').EventMap[K]>
+  ): void;
   once<T = unknown>(event: string, handler: EventHandler<T>): void;
+
+  off<K extends keyof import('../events/events.js').EventMap>(
+    event: K,
+    handler?: EventHandler<import('../events/events.js').EventMap[K]>
+  ): void;
   off(event: string, handler?: EventHandler): void;
+
   removeAllListeners(event?: string): void;
 }
 

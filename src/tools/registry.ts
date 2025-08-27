@@ -1,8 +1,9 @@
 // Tool Registry - Extensible, Type-Safe Tool Management
 // Replaces the monolithic ToolService with elegant composition
 
+import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { EVENTS } from '../events/events.js';
 import type {
@@ -39,7 +40,9 @@ export class ToolRegistry implements IToolRegistry {
         ({
           name: handler.name,
           description: handler.description,
-          inputSchema: this.zodToJsonSchema(handler.inputSchema as any),
+          inputSchema: zodToJsonSchema(handler.inputSchema as z.ZodType, {
+            target: 'openApi3',
+          }),
         }) as Tool
     );
   }
@@ -184,45 +187,5 @@ export class ToolRegistry implements IToolRegistry {
         error: eventError,
       });
     }
-  }
-
-  // Convert Zod schema to JSON Schema for MCP
-  private zodToJsonSchema(zodSchema: any): Record<string, unknown> {
-    // Basic conversion - in a real implementation, you'd use a library like zod-to-json-schema
-    // For now, we'll use a simplified approach
-
-    if (zodSchema instanceof z.ZodObject) {
-      const shape = zodSchema.shape;
-      const properties: Record<string, unknown> = {};
-      const required: string[] = [];
-
-      for (const [key, value] of Object.entries(shape)) {
-        if (value instanceof z.ZodString) {
-          properties[key] = { type: 'string' };
-          if (!(value as { isOptional: () => boolean }).isOptional())
-            required.push(key);
-        } else if (value instanceof z.ZodNumber) {
-          properties[key] = { type: 'number' };
-          if (!(value as { isOptional: () => boolean }).isOptional())
-            required.push(key);
-        } else if (value instanceof z.ZodBoolean) {
-          properties[key] = { type: 'boolean' };
-          if (!(value as { isOptional: () => boolean }).isOptional())
-            required.push(key);
-        } else {
-          // Fallback for complex types
-          properties[key] = { type: 'object' };
-        }
-      }
-
-      return {
-        type: 'object',
-        properties,
-        required,
-      };
-    }
-
-    // Fallback for non-object schemas
-    return { type: 'object' };
   }
 }

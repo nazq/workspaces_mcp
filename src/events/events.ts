@@ -92,17 +92,20 @@ export interface WorkspaceAccessedEvent {
 
 export interface InstructionCreatedEvent {
   name: string;
-  type: 'shared' | 'global';
+  type?: 'shared' | 'global';
   description?: string;
-  contentLength: number;
-  createdAt: Date;
+  contentLength?: number;
+  createdAt?: Date;
+  timestamp?: string; // ISO string timestamp
 }
 
 export interface InstructionUpdatedEvent {
-  name: string;
-  type: 'shared' | 'global';
-  contentLength: number;
-  updatedAt: Date;
+  name?: string;
+  type?: 'shared' | 'global';
+  contentLength?: number;
+  updatedAt?: Date;
+  appended?: boolean; // For global instructions
+  timestamp?: string; // ISO string timestamp
 }
 
 export interface InstructionDeletedEvent {
@@ -288,7 +291,65 @@ export interface InternalErrorEvent {
   stack?: string;
 }
 
-// Union type for all events
+// Type-safe EventMap - maps event names to their payload types
+export interface EventMap {
+  // Workspace Lifecycle Events
+  [EVENTS.WORKSPACE_CREATED]: WorkspaceCreatedEvent;
+  [EVENTS.WORKSPACE_UPDATED]: WorkspaceUpdatedEvent;
+  [EVENTS.WORKSPACE_DELETED]: WorkspaceDeletedEvent;
+  [EVENTS.WORKSPACE_ACCESSED]: WorkspaceAccessedEvent;
+
+  // Instruction Events
+  [EVENTS.INSTRUCTION_CREATED]: InstructionCreatedEvent;
+  [EVENTS.INSTRUCTION_UPDATED]: InstructionUpdatedEvent;
+  [EVENTS.INSTRUCTION_DELETED]: InstructionDeletedEvent;
+  [EVENTS.GLOBAL_INSTRUCTIONS_UPDATED]: InstructionUpdatedEvent;
+
+  // Server Lifecycle Events
+  [EVENTS.SERVER_STARTING]: ServerStartingEvent;
+  [EVENTS.SERVER_STARTED]: ServerStartedEvent;
+  [EVENTS.SERVER_STOPPING]: ServerStoppingEvent;
+  [EVENTS.SERVER_STOPPED]: ServerStoppedEvent;
+  [EVENTS.SERVER_ERROR]: ServerErrorEvent;
+
+  // Transport Events
+  [EVENTS.TRANSPORT_CONNECTED]: TransportConnectedEvent;
+  [EVENTS.TRANSPORT_DISCONNECTED]: TransportDisconnectedEvent;
+  [EVENTS.TRANSPORT_ERROR]: TransportErrorEvent;
+  [EVENTS.TRANSPORT_MESSAGE_SENT]: { message: string; timestamp: Date };
+  [EVENTS.TRANSPORT_MESSAGE_RECEIVED]: { message: string; timestamp: Date };
+
+  // Tool Events
+  [EVENTS.TOOL_EXECUTED]: ToolExecutedEvent;
+  [EVENTS.TOOL_FAILED]: ToolFailedEvent;
+  [EVENTS.TOOL_REGISTERED]: ToolRegisteredEvent;
+  [EVENTS.TOOL_UNREGISTERED]: ToolUnregisteredEvent;
+
+  // Resource Events
+  [EVENTS.RESOURCE_REQUESTED]: ResourceRequestedEvent;
+  [EVENTS.RESOURCE_SERVED]: ResourceServedEvent;
+  [EVENTS.RESOURCE_ERROR]: ResourceErrorEvent;
+
+  // Configuration Events
+  [EVENTS.CONFIG_LOADED]: ConfigLoadedEvent;
+  [EVENTS.CONFIG_UPDATED]: ConfigUpdatedEvent;
+  [EVENTS.CONFIG_VALIDATION_FAILED]: ConfigValidationFailedEvent;
+
+  // File System Events
+  [EVENTS.FILE_CREATED]: FileCreatedEvent;
+  [EVENTS.FILE_UPDATED]: FileUpdatedEvent;
+  [EVENTS.FILE_DELETED]: FileDeletedEvent;
+  [EVENTS.DIRECTORY_CREATED]: DirectoryCreatedEvent;
+  [EVENTS.DIRECTORY_DELETED]: DirectoryDeletedEvent;
+
+  // Error Events
+  [EVENTS.VALIDATION_ERROR]: ValidationErrorEvent;
+  [EVENTS.PERMISSION_ERROR]: PermissionErrorEvent;
+  [EVENTS.NOT_FOUND_ERROR]: NotFoundErrorEvent;
+  [EVENTS.INTERNAL_ERROR]: InternalErrorEvent;
+}
+
+// Union type for all events (kept for backward compatibility)
 export type DomainEvent =
   | WorkspaceCreatedEvent
   | WorkspaceUpdatedEvent
