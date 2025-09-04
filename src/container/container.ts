@@ -1,10 +1,10 @@
 // TSyringe Dependency Injection Container Configuration
-// Dependency injection using TSyringe
+// Modern decorator-based dependency injection with clean architecture
 
 import 'reflect-metadata';
 import { container } from 'tsyringe';
 
-// Import all dependencies at the top to avoid dynamic import issues
+// Import all dependencies
 import { AsyncEventBus } from '../events/event-bus.js';
 import type { AppConfig, EventBus, Logger } from '../interfaces/services.js';
 import { NodeFileSystemProvider } from '../layers/data/filesystem/node-provider.js';
@@ -14,31 +14,18 @@ import { InstructionsService } from '../layers/services/instructions-service.js'
 import { ResourceService } from '../layers/services/resource-service.js';
 import { ToolService } from '../layers/services/tool-service.js';
 import { WorkspaceService } from '../layers/services/workspace-service.js';
+import { ConfigService } from '../services/config-service.js';
 import { ToolRegistry } from '../tools/registry.js';
 import { createChildLogger } from '../utils/logger.js';
 
-// Tokens for interface-based injection
-export const TOKENS = {
-  // Core Infrastructure
-  FileSystemProvider: Symbol('FileSystemProvider'),
-  Logger: Symbol('Logger'),
-  EventBus: Symbol('EventBus'),
+import { TOKENS } from './tokens.js';
 
-  // Repositories
-  WorkspaceRepository: Symbol('WorkspaceRepository'),
-  InstructionsRepository: Symbol('InstructionsRepository'),
+// Re-export tokens for compatibility
+export { TOKENS } from './tokens.js';
 
-  // Services
-  WorkspaceService: Symbol('WorkspaceService'),
-  InstructionsService: Symbol('InstructionsService'),
-  ResourceService: Symbol('ResourceService'),
-  ToolService: Symbol('ToolService'),
-
-  // Tools
-  ToolRegistry: Symbol('ToolRegistry'),
-
-  // Configuration
-  AppConfig: Symbol('AppConfig'),
+// Legacy TOKENS export for backward compatibility (will be removed)
+export const TOKENS_LEGACY = {
+  ...TOKENS,
 } as const;
 
 /**
@@ -56,114 +43,51 @@ export function configureContainer(config: {
   // Clear existing registrations
   container.clearInstances();
 
-  // Infrastructure (Singletons) - Use useFactory to avoid TypeInfo issues
-  container.register(TOKENS.FileSystemProvider, {
-    useFactory: () => new NodeFileSystemProvider(),
-  });
+  // Register configuration service and initialize it
+  const configService = new ConfigService();
+  configService.initialize(config);
+  container.registerInstance(TOKENS.ConfigService, configService);
+  container.registerInstance(TOKENS.AppConfig, configService.getConfig());
 
-  // Register AsyncEventBus with useFactory to avoid TypeInfo issues
-  container.register(TOKENS.EventBus, {
-    useFactory: () => new AsyncEventBus(),
-  });
+  // Register path tokens for repositories
+  container.registerInstance('WorkspacesRoot', config.workspacesRoot);
+  container.registerInstance(
+    'SharedInstructionsPath',
+    config.sharedInstructionsPath
+  );
+  container.registerInstance(
+    'GlobalInstructionsPath',
+    config.globalInstructionsPath
+  );
 
-  // Logger factory
+  // Infrastructure (Singletons) - Using class registration with decorators
+  // Logger needs special handling as it's a factory function
   container.register(TOKENS.Logger, {
     useFactory: () => createChildLogger('mcp-server'),
   });
 
-  // Configuration
-  container.register(TOKENS.AppConfig, {
-    useValue: {
-      workspaces: {
-        rootPath: config.workspacesRoot,
-        maxWorkspaces: 100,
-        allowedTemplates: ['basic', 'react-typescript', 'python'],
-      },
-      server: {
-        transport: { type: 'stdio', stdio: {} },
-        timeout: 30000,
-      },
-      logging: {
-        level: 'info',
-        format: 'text',
-        destination: 'stdout',
-      },
-      features: {
-        enableTemplates: true,
-        enableSharedInstructions: true,
-        enableFileWatching: false,
-      },
-      development: {
-        enableDebugMode: false,
-        mockServices: false,
-      },
-      security: {
-        maxFileSize: 1024 * 1024,
-        allowedFileTypes: ['txt', 'md', 'json'],
-        sanitizeContent: true,
-      },
-      performance: {
-        cacheEnabled: false,
-        cacheTTL: 300,
-        maxConcurrentRequests: 10,
-      },
-    },
-  });
+  // Register services with decorator-based injection
+  container.registerSingleton(TOKENS.FileSystemService, NodeFileSystemProvider);
+  container.registerSingleton(TOKENS.EventBus, AsyncEventBus);
 
-  // Repositories (Singletons)
-  container.register(TOKENS.WorkspaceRepository, {
-    useFactory: (c) =>
-      new FileSystemWorkspaceRepository(
-        c.resolve(TOKENS.FileSystemProvider),
-        config.workspacesRoot
-      ),
-  });
+  // Repositories (Singletons) - Using class registration
+  container.registerSingleton(
+    TOKENS.WorkspaceRepository,
+    FileSystemWorkspaceRepository
+  );
+  container.registerSingleton(
+    TOKENS.InstructionsRepository,
+    FileSystemInstructionsRepository
+  );
 
-  container.register(TOKENS.InstructionsRepository, {
-    useFactory: (c) =>
-      new FileSystemInstructionsRepository(
-        c.resolve(TOKENS.FileSystemProvider),
-        config.sharedInstructionsPath,
-        config.globalInstructionsPath
-      ),
-  });
+  // Services (Singletons) - Using class registration
+  container.registerSingleton(TOKENS.WorkspaceService, WorkspaceService);
+  container.registerSingleton(TOKENS.InstructionsService, InstructionsService);
+  container.registerSingleton(TOKENS.ResourceService, ResourceService);
 
-  // Services (Singletons)
-  container.register(TOKENS.WorkspaceService, {
-    useFactory: (c) =>
-      new WorkspaceService(
-        c.resolve(TOKENS.WorkspaceRepository),
-        c.resolve(TOKENS.Logger)
-      ),
-  });
-
-  container.register(TOKENS.InstructionsService, {
-    useFactory: (c) =>
-      new InstructionsService(
-        c.resolve(TOKENS.InstructionsRepository),
-        c.resolve(TOKENS.Logger)
-      ),
-  });
-
-  container.register(TOKENS.ResourceService, {
-    useFactory: (c) =>
-      new ResourceService(
-        c.resolve(TOKENS.WorkspaceRepository),
-        c.resolve(TOKENS.InstructionsRepository),
-        c.resolve(TOKENS.EventBus),
-        c.resolve(TOKENS.Logger)
-      ),
-  });
-
-  // Tool Infrastructure - Use useFactory to avoid TypeInfo issues
-  container.register(TOKENS.ToolRegistry, {
-    useFactory: () => new ToolRegistry(),
-  });
-
-  container.register(TOKENS.ToolService, {
-    useFactory: (c) =>
-      new ToolService(c.resolve(TOKENS.ToolRegistry), c.resolve(TOKENS.Logger)),
-  });
+  // Tool Infrastructure - Using class registration
+  container.registerSingleton(TOKENS.ToolRegistry, ToolRegistry);
+  container.registerSingleton(TOKENS.ToolService, ToolService);
 }
 
 /**

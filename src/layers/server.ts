@@ -19,9 +19,16 @@ import {
   getContainer,
   TOKENS,
 } from '../container/container.js';
-import type { ResourceService, ToolService } from '../interfaces/services.js';
+import type {
+  AppConfig,
+  EventBus,
+  InstructionsService,
+  Logger,
+  ResourceService,
+  ToolService,
+  WorkspaceService,
+} from '../interfaces/services.js';
 import { createChildLogger } from '../utils/logger.js';
-import { getError, getValue, isErr } from '../utils/result.js';
 
 import { ControllerFactory } from './controllers/index.js';
 import { ProtocolProcessor } from './protocol/index.js';
@@ -212,16 +219,16 @@ export class WorkspacesMcpServer {
           }
         );
 
-        if (isErr(result)) {
+        if (result.isErr()) {
           logger.debug('Server handler: Result is error');
-          const error = getError(result);
+          const error = result.error;
           const message =
             error instanceof Error ? error.message : String(error);
           throw new Error(message);
         }
 
         logger.debug('Server handler: Result is success, getting value');
-        const value = getValue(result);
+        const value = result.value;
         logger.debug('Server handler: Returning value', {
           valueType: typeof value,
           resourcesCount: value?.resources?.length,
@@ -243,8 +250,8 @@ export class WorkspacesMcpServer {
       async (request) => {
         try {
           const result = await resourceService.readResource(request.params.uri);
-          if (isErr(result)) {
-            const error = getError(result);
+          if (result.isErr()) {
+            const error = result.error;
             const message =
               error instanceof Error ? error.message : String(error);
             logger.error(`Resource read failed: ${request.params.uri}`, {
@@ -252,7 +259,7 @@ export class WorkspacesMcpServer {
             });
             throw new Error(message);
           }
-          return getValue(result);
+          return result.value;
         } catch (error) {
           const message =
             error instanceof Error ? error.message : String(error);
@@ -267,22 +274,37 @@ export class WorkspacesMcpServer {
 
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       const result = await toolService.listTools();
-      if (isErr(result)) {
-        const error = getError(result);
+      if (result.isErr()) {
+        const error = result.error;
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(message);
       }
-      return getValue(result);
+      return result.value;
     });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
+        // Get services from DI container to create ToolContext
+        const container = getContainer();
+        const toolContext = {
+          workspaceRepository: container.resolve(
+            TOKENS.WorkspaceService
+          ) as WorkspaceService,
+          instructionsRepository: container.resolve(
+            TOKENS.InstructionsService
+          ) as InstructionsService,
+          config: container.resolve(TOKENS.AppConfig) as AppConfig,
+          logger: container.resolve(TOKENS.Logger) as Logger,
+          eventBus: container.resolve(TOKENS.EventBus) as EventBus,
+        };
+
         const result = await toolService.callTool(
           request.params.name,
-          request.params.arguments
+          request.params.arguments,
+          toolContext
         );
-        if (isErr(result)) {
-          const error = getError(result);
+        if (result.isErr()) {
+          const error = result.error;
           const message =
             error instanceof Error ? error.message : String(error);
           logger.error(`Tool execution failed: ${request.params.name}`, {
@@ -301,7 +323,7 @@ export class WorkspacesMcpServer {
             isError: true,
           };
         }
-        return getValue(result);
+        return result.value;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         logger.error(

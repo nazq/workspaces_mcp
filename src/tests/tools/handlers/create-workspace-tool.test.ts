@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { err, ok } from 'neverthrow';
 import type {
   EventBus,
   Logger,
@@ -7,29 +8,28 @@ import type {
   WorkspaceService,
 } from '../../../interfaces/services.js';
 import { CreateWorkspaceTool } from '../../../tools/handlers/create-workspace-tool.js';
-import { Err, Ok } from '../../../utils/result.js';
 
 // Mock workspace service
 const createMockWorkspaceService = (): WorkspaceService => ({
   createWorkspace: vi.fn().mockResolvedValue(
-    Ok({
+    ok({
       name: 'test-workspace',
       path: '/test/path',
       createdAt: new Date(),
       updatedAt: new Date(),
     })
   ),
-  listWorkspaces: vi.fn().mockResolvedValue(Ok([])),
-  workspaceExists: vi.fn().mockResolvedValue(Ok(false)),
+  listWorkspaces: vi.fn().mockResolvedValue(ok([])),
+  workspaceExists: vi.fn().mockResolvedValue(ok(false)),
   getWorkspaceInfo: vi.fn().mockResolvedValue(
-    Ok({
+    ok({
       name: 'test-workspace',
       path: '/test/path',
       createdAt: new Date(),
       updatedAt: new Date(),
     })
   ),
-  deleteWorkspace: vi.fn().mockResolvedValue(Ok(undefined)),
+  deleteWorkspace: vi.fn().mockResolvedValue(ok(undefined)),
 });
 
 // Mock tool context
@@ -167,8 +167,8 @@ describe('CreateWorkspaceTool', () => {
 
       const result = await tool.execute(args, mockContext);
 
-      expect(result.success).toBe(true);
-      if (result.success) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value.content[0]?.text).toContain('created successfully');
       }
 
@@ -186,7 +186,7 @@ describe('CreateWorkspaceTool', () => {
 
       const result = await tool.execute(args, mockContext);
 
-      expect(result.success).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(
         mockContext.workspaceRepository.createWorkspace
       ).toHaveBeenCalledWith(
@@ -201,15 +201,15 @@ describe('CreateWorkspaceTool', () => {
     it('should handle workspace already exists error', async () => {
       vi.mocked(
         mockContext.workspaceRepository.createWorkspace
-      ).mockResolvedValue(Err(new Error('Workspace already exists')));
+      ).mockResolvedValue(err(new Error('Workspace already exists')));
 
       const result = await tool.execute(
         { name: 'existing-workspace' },
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (result.isErr()) {
         expect(result.error.message).toContain('Workspace already exists');
       }
     });
@@ -217,15 +217,15 @@ describe('CreateWorkspaceTool', () => {
     it('should handle repository errors', async () => {
       vi.mocked(
         mockContext.workspaceRepository.createWorkspace
-      ).mockResolvedValue(Err(new Error('Repository error')));
+      ).mockResolvedValue(err(new Error('Repository error')));
 
       const result = await tool.execute(
         { name: 'error-workspace' },
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (result.isErr()) {
         expect(result.error.message).toContain('Repository error');
       }
     });
@@ -265,8 +265,8 @@ describe('CreateWorkspaceTool', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (result.isErr()) {
         expect(result.error.message).toContain(
           'Unexpected error creating workspace'
         );
@@ -284,8 +284,8 @@ describe('CreateWorkspaceTool', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (result.isErr()) {
         expect(result.error.message).toContain(
           'Unexpected error creating workspace'
         );
@@ -297,7 +297,7 @@ describe('CreateWorkspaceTool', () => {
       const maxLengthName = 'a'.repeat(100);
       const result = await tool.execute({ name: maxLengthName }, mockContext);
 
-      expect(result.success).toBe(true);
+      expect(result.isOk()).toBe(true);
     });
 
     it('should handle null or undefined context gracefully', async () => {
@@ -314,7 +314,7 @@ describe('CreateWorkspaceTool', () => {
     it('should create workspace without template', async () => {
       const result = await tool.execute({ name: 'no-template' }, mockContext);
 
-      expect(result.success).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(
         mockContext.workspaceRepository.createWorkspace
       ).toHaveBeenCalledWith(
@@ -331,7 +331,7 @@ describe('CreateWorkspaceTool', () => {
         mockContext
       );
 
-      expect(result.success).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(
         mockContext.workspaceRepository.createWorkspace
       ).toHaveBeenCalledWith(
@@ -367,7 +367,7 @@ describe('CreateWorkspaceTool', () => {
         mockContext
       );
 
-      expect(result.success).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(
         mockContext.workspaceRepository.createWorkspace
       ).toHaveBeenCalledWith(
@@ -383,8 +383,8 @@ describe('CreateWorkspaceTool', () => {
     it('should return properly formatted success response', async () => {
       const result = await tool.execute({ name: 'format-test' }, mockContext);
 
-      expect(result.success).toBe(true);
-      if (result.success) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value).toMatchObject({
           content: expect.arrayContaining([
             expect.objectContaining({
@@ -400,12 +400,12 @@ describe('CreateWorkspaceTool', () => {
     it('should return properly formatted error response', async () => {
       vi.mocked(
         mockContext.workspaceRepository.createWorkspace
-      ).mockResolvedValue(Err(new Error('Creation failed')));
+      ).mockResolvedValue(err(new Error('Creation failed')));
 
       const result = await tool.execute({ name: 'error-format' }, mockContext);
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (result.isErr()) {
         expect(result.error).toBeInstanceOf(Error);
         expect(result.error.message).toContain('Creation failed');
       }

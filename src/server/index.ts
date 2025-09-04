@@ -7,6 +7,7 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import 'reflect-metadata';
 
 import { SERVER_NAME, SERVER_VERSION } from '../config/constants.js';
 import { getDefaultWorkspacesRoot } from '../config/paths.js';

@@ -2,12 +2,12 @@
 // Handles creation of shared instruction files
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import { z } from 'zod';
 
 import { EVENTS } from '../../events/events.js';
 import type { ToolContext, ToolHandler } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, getError, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Tool handler for creating shared instruction files
@@ -42,7 +42,7 @@ export class CreateSharedInstructionTool implements ToolHandler {
   async execute(
     args: z.infer<typeof this.inputSchema>,
     context: ToolContext
-  ): Promise<Result<CallToolResult>> {
+  ): Promise<Result<CallToolResult, Error>> {
     try {
       const { name, content, description } = args;
 
@@ -54,8 +54,8 @@ export class CreateSharedInstructionTool implements ToolHandler {
           { description }
         );
 
-      if (isErr(result)) {
-        return Err(getError(result));
+      if (result.isErr()) {
+        return err(result.error);
       }
 
       // Emit event for other parts of the system
@@ -76,7 +76,7 @@ export class CreateSharedInstructionTool implements ToolHandler {
         `This instruction can now be referenced in workspaces and will be available ` +
         `in the resources list for easy access.`;
 
-      return Ok({
+      return ok({
         content: [
           {
             type: 'text',
@@ -87,7 +87,7 @@ export class CreateSharedInstructionTool implements ToolHandler {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      return Err(new Error(`Failed to create shared instruction: ${message}`));
+      return err(new Error(`Failed to create shared instruction: ${message}`));
     }
   }
 }

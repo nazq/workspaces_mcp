@@ -2,6 +2,7 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
+import { err, ok } from 'neverthrow';
 import type {
   EventBus,
   Logger,
@@ -10,7 +11,6 @@ import type {
   ToolRegistry,
 } from '../../../interfaces/services.js';
 import { ToolService } from '../../../layers/services/tool-service.js';
-import { Err, Ok } from '../../../utils/result.js';
 
 // Mock tool handler for testing
 const createMockToolHandler = (name: string = 'mock-tool'): ToolHandler => ({
@@ -21,7 +21,7 @@ const createMockToolHandler = (name: string = 'mock-tool'): ToolHandler => ({
     count: z.number().optional(),
   }),
   async execute(args: any) {
-    return Ok({
+    return ok({
       content: [
         {
           type: 'text' as const,
@@ -40,7 +40,7 @@ const createFailingToolHandler = (): ToolHandler => ({
     message: z.string(),
   }),
   async execute() {
-    return Err(new Error('Tool execution failed'));
+    return err(new Error('Tool execution failed'));
   },
 });
 
@@ -56,7 +56,7 @@ const createMockToolRegistry = (): ToolRegistry => ({
     } as Tool,
   ]),
   execute: vi.fn().mockResolvedValue(
-    Ok({
+    ok({
       content: [{ type: 'text', text: 'Success' }],
     })
   ),
@@ -131,8 +131,8 @@ describe('ToolService', () => {
     it('should successfully list tools', async () => {
       const result = await toolService.listTools();
 
-      expect(result.success).toBe(true);
-      if (result.success) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value.tools).toHaveLength(1);
         expect(result.value.tools[0]?.name).toBe('create_workspace');
       }
@@ -154,8 +154,8 @@ describe('ToolService', () => {
 
       const result = await toolService.listTools();
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toContain('Tool listing failed');
       }
 
@@ -172,8 +172,8 @@ describe('ToolService', () => {
 
       const result = await toolService.listTools();
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toBe('Tool listing failed: String error');
       }
     });
@@ -187,8 +187,8 @@ describe('ToolService', () => {
         mockContext
       );
 
-      expect(result.success).toBe(true);
-      if (result.success) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value.content[0]?.text).toBe('Success');
       }
 
@@ -222,8 +222,8 @@ describe('ToolService', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toBe(
           "Unknown tool: 'unknown-tool'. Available tools: tool1, tool2"
         );
@@ -241,7 +241,7 @@ describe('ToolService', () => {
     it('should handle tool execution errors', async () => {
       const executionError = new Error('Tool failed');
       vi.mocked(mockToolRegistry.execute).mockResolvedValue(
-        Err(executionError)
+        err(executionError)
       );
 
       const result = await toolService.callTool(
@@ -250,8 +250,8 @@ describe('ToolService', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error).toBe(executionError);
       }
 
@@ -286,8 +286,8 @@ describe('ToolService', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toContain('Tool execution failed');
       }
 
@@ -309,8 +309,8 @@ describe('ToolService', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toBe(
           'Tool execution failed: String error'
         );
@@ -334,7 +334,7 @@ describe('ToolService', () => {
 
       const result = toolService.registerTool(mockHandler);
 
-      expect(result.success).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(mockToolRegistry.register).toHaveBeenCalledWith(mockHandler);
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Tool handler registered: new-tool'
@@ -349,8 +349,8 @@ describe('ToolService', () => {
 
       const result = toolService.registerTool(mockHandler);
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toContain('Tool registration failed');
       }
 
@@ -368,8 +368,8 @@ describe('ToolService', () => {
 
       const result = toolService.registerTool(mockHandler);
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toBe(
           'Tool registration failed: String error'
         );
@@ -381,7 +381,7 @@ describe('ToolService', () => {
     it('should successfully unregister a tool', () => {
       const result = toolService.unregisterTool('test-tool');
 
-      expect(result.success).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(mockToolRegistry.unregister).toHaveBeenCalledWith('test-tool');
       expect(mockLogger.info).toHaveBeenCalledWith(
         'Tool handler unregistered: test-tool'
@@ -395,8 +395,8 @@ describe('ToolService', () => {
 
       const result = toolService.unregisterTool('test-tool');
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toContain('Tool unregistration failed');
       }
 
@@ -413,8 +413,8 @@ describe('ToolService', () => {
 
       const result = toolService.unregisterTool('test-tool');
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toBe(
           'Tool unregistration failed: String error'
         );
@@ -513,11 +513,11 @@ describe('ToolService', () => {
 
       // Register
       const registerResult = toolService.registerTool(handler);
-      expect(registerResult.success).toBe(true);
+      expect(registerResult.isOk()).toBe(true);
 
       // List tools
       const listResult = await toolService.listTools();
-      expect(listResult.success).toBe(true);
+      expect(listResult.isOk()).toBe(true);
 
       // Execute tool
       const executeResult = await toolService.callTool(
@@ -525,11 +525,11 @@ describe('ToolService', () => {
         { message: 'test' },
         mockContext
       );
-      expect(executeResult.success).toBe(true);
+      expect(executeResult.isOk()).toBe(true);
 
       // Unregister
       const unregisterResult = toolService.unregisterTool('workflow-tool');
-      expect(unregisterResult.success).toBe(true);
+      expect(unregisterResult.isOk()).toBe(true);
 
       // Verify all operations were logged
       expect(mockLogger.info).toHaveBeenCalledTimes(5); // init + register + execute (2 calls) + unregister
@@ -552,7 +552,7 @@ describe('ToolService', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
+      expect(result.isOk()).toBe(false);
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Unexpected error executing tool: create_workspace',
         {

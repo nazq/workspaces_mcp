@@ -5,7 +5,11 @@ import type {
   CallToolResult,
   ListToolsResult,
 } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
+import { inject, injectable } from 'tsyringe';
 
+import { TOKENS } from '../../container/tokens.js';
 import type {
   ToolService as IToolService,
   Logger,
@@ -19,8 +23,6 @@ import { GetWorkspaceInfoTool } from '../../tools/handlers/get-workspace-info-to
 import { ListSharedInstructionsTool } from '../../tools/handlers/list-shared-instructions-tool.js';
 import { ListWorkspacesTool } from '../../tools/handlers/list-workspaces-tool.js';
 import { UpdateGlobalInstructionsTool } from '../../tools/handlers/update-global-instructions-tool.js';
-import type { Result } from '../../utils/result.js';
-import { Err, getError, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Modern tool service using extensible ToolRegistry architecture
@@ -37,7 +39,7 @@ import { Err, getError, isErr, Ok } from '../../utils/result.js';
  *
  * // List available tools
  * const listResult = await toolService.listTools();
- * if (isOk(listResult)) {
+ * if (listResult.isOk()) {
  *   console.log(`Found ${listResult.value.tools.length} tools`);
  * }
  *
@@ -48,6 +50,7 @@ import { Err, getError, isErr, Ok } from '../../utils/result.js';
  * });
  * ```
  */
+@injectable()
 export class ToolService implements IToolService {
   /**
    * Create tool service with modern registry architecture
@@ -56,8 +59,8 @@ export class ToolService implements IToolService {
    * @param logger - Logger for comprehensive monitoring
    */
   constructor(
-    private readonly toolRegistry: ToolRegistry,
-    private readonly logger: Logger
+    @inject(TOKENS.ToolRegistry) private readonly toolRegistry: ToolRegistry,
+    @inject(TOKENS.Logger) private readonly logger: Logger
   ) {
     this.initializeDefaultTools();
   }
@@ -95,7 +98,7 @@ export class ToolService implements IToolService {
    *
    * @returns Result containing list of available tools
    */
-  async listTools(): Promise<Result<ListToolsResult>> {
+  async listTools(): Promise<Result<ListToolsResult, Error>> {
     try {
       this.logger.debug('Listing all available tools from registry');
 
@@ -105,11 +108,11 @@ export class ToolService implements IToolService {
         toolNames: tools.map((t) => (t as { name: string }).name),
       });
 
-      return Ok({ tools } as ListToolsResult);
+      return ok({ tools } as ListToolsResult);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to list tools from registry', error);
-      return Err(new Error(`Tool listing failed: ${message}`));
+      return err(new Error(`Tool listing failed: ${message}`));
     }
   }
 
@@ -128,7 +131,7 @@ export class ToolService implements IToolService {
     name: string,
     args: unknown = {},
     context?: ToolContext
-  ): Promise<Result<CallToolResult>> {
+  ): Promise<Result<CallToolResult, Error>> {
     try {
       this.logger.info(`Executing tool via registry: ${name}`, { args });
 
@@ -142,7 +145,7 @@ export class ToolService implements IToolService {
           requestedTool: name,
           availableTools,
         });
-        return Err(error);
+        return err(error);
       }
 
       // Provide minimal context if not provided
@@ -158,9 +161,9 @@ export class ToolService implements IToolService {
         context as ToolContext // Type assertion needed due to optional parameter
       );
 
-      if (isErr(result)) {
+      if (result.isErr()) {
         this.logger.error(`Tool execution failed: ${name}`, {
-          error: getError(result),
+          error: result.error,
           args,
         });
         return result;
@@ -176,7 +179,7 @@ export class ToolService implements IToolService {
       });
 
       // Return user-friendly error result
-      return Err(new Error(`Tool execution failed: ${message}`));
+      return err(new Error(`Tool execution failed: ${message}`));
     }
   }
 
@@ -186,15 +189,15 @@ export class ToolService implements IToolService {
    * @param handler - Tool handler to register
    * @returns Result indicating success or error
    */
-  registerTool(handler: ToolHandler): Result<void> {
+  registerTool(handler: ToolHandler): Result<void, Error> {
     try {
       this.toolRegistry.register(handler);
       this.logger.info(`Tool handler registered: ${handler.name}`);
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to register tool handler', error);
-      return Err(new Error(`Tool registration failed: ${message}`));
+      return err(new Error(`Tool registration failed: ${message}`));
     }
   }
 
@@ -204,15 +207,15 @@ export class ToolService implements IToolService {
    * @param name - Name of tool to unregister
    * @returns Result indicating success or error
    */
-  unregisterTool(name: string): Result<void> {
+  unregisterTool(name: string): Result<void, Error> {
     try {
       this.toolRegistry.unregister(name);
       this.logger.info(`Tool handler unregistered: ${name}`);
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to unregister tool handler: ${name}`, error);
-      return Err(new Error(`Tool unregistration failed: ${message}`));
+      return err(new Error(`Tool unregistration failed: ${message}`));
     }
   }
 

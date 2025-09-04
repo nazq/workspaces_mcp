@@ -7,8 +7,7 @@ import type {
   ListToolsResult,
   ReadResourceResult,
 } from '@modelcontextprotocol/sdk/types.js';
-
-import type { Result } from '../utils/result.js';
+import type { Result } from 'neverthrow';
 
 // Domain Models
 export interface WorkspaceMetadata {
@@ -58,30 +57,34 @@ export interface WorkspaceService {
   createWorkspace(
     name: string,
     options?: WorkspaceCreateOptions
-  ): Promise<Result<WorkspaceMetadata>>;
+  ): Promise<Result<WorkspaceMetadata, Error>>;
 
-  listWorkspaces(): Promise<Result<WorkspaceMetadata[]>>;
+  listWorkspaces(): Promise<Result<WorkspaceMetadata[], Error>>;
 
-  getWorkspaceInfo(name: string): Promise<Result<WorkspaceMetadata>>;
+  getWorkspaceInfo(name: string): Promise<Result<WorkspaceMetadata, Error>>;
 
-  deleteWorkspace(name: string): Promise<Result<void>>;
+  deleteWorkspace(name: string): Promise<Result<void, Error>>;
 
-  workspaceExists(name: string): Promise<Result<boolean>>;
+  workspaceExists(name: string): Promise<Result<boolean, Error>>;
 
   updateWorkspace(
     name: string,
     options: Partial<WorkspaceCreateOptions>
-  ): Promise<Result<WorkspaceMetadata>>;
+  ): Promise<Result<WorkspaceMetadata, Error>>;
 }
 
 export interface ResourceService {
-  listResources(): Promise<Result<ListResourcesResult>>;
-  readResource(uri: string): Promise<Result<ReadResourceResult>>;
+  listResources(): Promise<Result<ListResourcesResult, Error>>;
+  readResource(uri: string): Promise<Result<ReadResourceResult, Error>>;
 }
 
 export interface ToolService {
-  listTools(): Promise<Result<ListToolsResult>>;
-  callTool(name: string, args?: unknown): Promise<Result<CallToolResult>>;
+  listTools(): Promise<Result<ListToolsResult, Error>>;
+  callTool(
+    name: string,
+    args?: unknown,
+    context?: ToolContext
+  ): Promise<Result<CallToolResult, Error>>;
 }
 
 export interface InstructionsService {
@@ -89,44 +92,47 @@ export interface InstructionsService {
     name: string,
     content: string,
     options?: SharedInstructionCreateOptions
-  ): Promise<Result<void>>;
+  ): Promise<Result<void, Error>>;
 
-  listSharedInstructions(): Promise<Result<SharedInstruction[]>>;
+  listSharedInstructions(): Promise<Result<SharedInstruction[], Error>>;
 
-  getSharedInstruction(name: string): Promise<Result<SharedInstruction>>;
+  getSharedInstruction(name: string): Promise<Result<SharedInstruction, Error>>;
 
   updateSharedInstruction(
     name: string,
     content: string,
     options?: SharedInstructionCreateOptions
-  ): Promise<Result<void>>;
+  ): Promise<Result<void, Error>>;
 
-  deleteSharedInstruction(name: string): Promise<Result<void>>;
+  deleteSharedInstruction(name: string): Promise<Result<void, Error>>;
 
   updateGlobalInstructions(
     content: string,
     options?: GlobalInstructionUpdateOptions
-  ): Promise<Result<void>>;
+  ): Promise<Result<void, Error>>;
 
-  getGlobalInstructions(): Promise<Result<GlobalInstructions>>;
+  getGlobalInstructions(): Promise<Result<GlobalInstructions, Error>>;
 }
 
 // Repository Interfaces
 export interface WorkspaceRepository {
-  create(name: string, options?: WorkspaceCreateOptions): Promise<Result<void>>;
+  create(
+    name: string,
+    options?: WorkspaceCreateOptions
+  ): Promise<Result<void, Error>>;
 
-  list(): Promise<Result<WorkspaceMetadata[]>>;
+  list(): Promise<Result<WorkspaceMetadata[], Error>>;
 
-  exists(name: string): Promise<Result<boolean>>;
+  exists(name: string): Promise<Result<boolean, Error>>;
 
-  getMetadata(name: string): Promise<Result<WorkspaceMetadata>>;
+  getMetadata(name: string): Promise<Result<WorkspaceMetadata, Error>>;
 
-  delete(name: string): Promise<Result<void>>;
+  delete(name: string): Promise<Result<void, Error>>;
 
   update(
     name: string,
     options: Partial<WorkspaceCreateOptions>
-  ): Promise<Result<void>>;
+  ): Promise<Result<void, Error>>;
 }
 
 export interface InstructionsRepository {
@@ -134,46 +140,52 @@ export interface InstructionsRepository {
     name: string,
     content: string,
     options?: SharedInstructionCreateOptions
-  ): Promise<Result<void>>;
+  ): Promise<Result<void, Error>>;
 
-  listShared(): Promise<Result<SharedInstruction[]>>;
+  listShared(): Promise<Result<SharedInstruction[], Error>>;
 
-  getShared(name: string): Promise<Result<SharedInstruction>>;
+  getShared(name: string): Promise<Result<SharedInstruction, Error>>;
 
   updateShared(
     name: string,
     content: string,
     options?: SharedInstructionCreateOptions
-  ): Promise<Result<void>>;
+  ): Promise<Result<void, Error>>;
 
-  deleteShared(name: string): Promise<Result<void>>;
+  deleteShared(name: string): Promise<Result<void, Error>>;
 
   updateGlobal(
     content: string,
     options?: GlobalInstructionUpdateOptions
-  ): Promise<Result<void>>;
+  ): Promise<Result<void, Error>>;
 
-  getGlobal(): Promise<Result<GlobalInstructions>>;
+  getGlobal(): Promise<Result<GlobalInstructions, Error>>;
 }
 
 // Infrastructure Interfaces
 export interface FileSystemService {
-  ensureDirectory(path: string): Promise<Result<void>>;
-  writeFile(path: string, content: string): Promise<Result<void>>;
-  readFile(path: string): Promise<Result<string>>;
-  fileExists(path: string): Promise<Result<boolean>>;
-  directoryExists(path: string): Promise<Result<boolean>>;
-  listFiles(path: string, recursive?: boolean): Promise<Result<string[]>>;
-  listDirectories(path: string): Promise<Result<string[]>>;
-  deleteFile(path: string): Promise<Result<void>>;
-  deleteDirectory(path: string): Promise<Result<void>>;
+  ensureDirectory(path: string): Promise<Result<void, Error>>;
+  writeFile(path: string, content: string): Promise<Result<void, Error>>;
+  readFile(path: string): Promise<Result<string, Error>>;
+  fileExists(path: string): Promise<Result<boolean, Error>>;
+  directoryExists(path: string): Promise<Result<boolean, Error>>;
+  listFiles(
+    path: string,
+    recursive?: boolean
+  ): Promise<Result<string[], Error>>;
+  listDirectories(path: string): Promise<Result<string[], Error>>;
+  deleteFile(path: string): Promise<Result<void, Error>>;
+  deleteDirectory(path: string): Promise<Result<void, Error>>;
   getFileStats(path: string): Promise<
-    Result<{
-      size: number;
-      createdAt: Date;
-      updatedAt: Date;
-      isDirectory: boolean;
-    }>
+    Result<
+      {
+        size: number;
+        createdAt: Date;
+        updatedAt: Date;
+        isDirectory: boolean;
+      },
+      Error
+    >
   >;
 }
 
@@ -215,7 +227,7 @@ export interface ToolHandler<TArgs = unknown, TResult = CallToolResult> {
   readonly description: string;
   readonly inputSchema: unknown; // Zod schema - typed as unknown to avoid import dependencies
 
-  execute(args: TArgs, context: ToolContext): Promise<Result<TResult>>;
+  execute(args: TArgs, context: ToolContext): Promise<Result<TResult, Error>>;
 }
 
 export interface ToolContext {
@@ -278,7 +290,7 @@ export interface ToolRegistry {
     name: string,
     args: unknown,
     context: ToolContext
-  ): Promise<Result<CallToolResult>>;
+  ): Promise<Result<CallToolResult, Error>>;
   hasHandler(name: string): boolean;
   getHandlerNames(): string[];
   getHandler(name: string): ToolHandler | undefined;

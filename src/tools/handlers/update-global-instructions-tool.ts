@@ -2,12 +2,12 @@
 // Handles updating the global instructions file
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import { z } from 'zod';
 
 import { EVENTS } from '../../events/events.js';
 import type { ToolContext, ToolHandler } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, getError, getValue, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Tool handler for updating global instructions
@@ -38,7 +38,7 @@ export class UpdateGlobalInstructionsTool implements ToolHandler {
   async execute(
     args: z.infer<typeof this.inputSchema>,
     context: ToolContext
-  ): Promise<Result<CallToolResult>> {
+  ): Promise<Result<CallToolResult, Error>> {
     try {
       const { content, append } = args;
 
@@ -48,8 +48,8 @@ export class UpdateGlobalInstructionsTool implements ToolHandler {
       if (append) {
         const currentResult =
           await context.instructionsRepository.getGlobalInstructions();
-        if (!isErr(currentResult)) {
-          const currentContent = getValue(currentResult).content;
+        if (!currentResult.isErr()) {
+          const currentContent = currentResult.value.content;
           finalContent = `${currentContent}\n\n${content}`;
         }
       }
@@ -60,8 +60,8 @@ export class UpdateGlobalInstructionsTool implements ToolHandler {
           finalContent
         );
 
-      if (isErr(result)) {
-        return Err(getError(result));
+      if (result.isErr()) {
+        return err(result.error);
       }
 
       // Emit event for other parts of the system
@@ -81,7 +81,7 @@ export class UpdateGlobalInstructionsTool implements ToolHandler {
         `These instructions will now be automatically loaded in every Claude session. ` +
         `The changes will take effect in new conversations.`;
 
-      return Ok({
+      return ok({
         content: [
           {
             type: 'text',
@@ -92,7 +92,7 @@ export class UpdateGlobalInstructionsTool implements ToolHandler {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      return Err(new Error(`Failed to update global instructions: ${message}`));
+      return err(new Error(`Failed to update global instructions: ${message}`));
     }
   }
 }

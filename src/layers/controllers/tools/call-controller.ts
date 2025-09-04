@@ -5,7 +5,6 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 
 import type { ToolService } from '../../../interfaces/services.js';
-import { getError, getValue, isErr } from '../../../utils/result.js';
 import { BaseController } from '../base.js';
 
 export class CallToolController extends BaseController<'tools/call'> {
@@ -21,11 +20,11 @@ export class CallToolController extends BaseController<'tools/call'> {
 
     const result = await this.toolService.callTool(name, args);
 
-    if (isErr(result)) {
-      this.handleError(getError(result), `Failed to execute tool: ${name}`);
+    if (result.isErr()) {
+      this.handleError(result.error, `Failed to execute tool: ${name}`);
     }
 
-    const toolResult = getValue(result);
+    const toolResult = result.value;
     this.logger.info(`Successfully executed tool: ${name}`);
     return toolResult;
   }

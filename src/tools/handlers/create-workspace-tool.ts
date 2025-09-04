@@ -3,12 +3,12 @@
 // Part of the modular tool registry system for maximum extensibility
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import { z } from 'zod';
 
 import { EVENTS } from '../../events/events.js';
 import type { ToolContext, ToolHandler } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, getError, getValue, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Tool handler for creating new workspaces
@@ -50,7 +50,7 @@ export class CreateWorkspaceTool implements ToolHandler {
   async execute(
     args: z.infer<typeof this.inputSchema>,
     context: ToolContext
-  ): Promise<Result<CallToolResult>> {
+  ): Promise<Result<CallToolResult, Error>> {
     const { name, description, template } = args;
 
     try {
@@ -62,18 +62,18 @@ export class CreateWorkspaceTool implements ToolHandler {
       // Check if workspace already exists
       const existsResult =
         await context.workspaceRepository.workspaceExists(name);
-      if (isErr(existsResult)) {
+      if (existsResult.isErr()) {
         const message =
-          getError(existsResult) instanceof Error
-            ? getError(existsResult).message
-            : String(getError(existsResult));
-        return Err(
+          existsResult.error instanceof Error
+            ? existsResult.error.message
+            : String(existsResult.error);
+        return err(
           new Error(`Failed to check workspace existence: ${message}`)
         );
       }
 
-      if (getValue(existsResult)) {
-        return Err(new Error(`Workspace '${name}' already exists`));
+      if (existsResult.value) {
+        return err(new Error(`Workspace '${name}' already exists`));
       }
 
       // Create the workspace using the repository
@@ -85,16 +85,16 @@ export class CreateWorkspaceTool implements ToolHandler {
         }
       );
 
-      if (isErr(createResult)) {
+      if (createResult.isErr()) {
         context.logger.error(
           `Failed to create workspace: ${name}`,
-          getError(createResult)
+          createResult.error
         );
         const message =
-          getError(createResult) instanceof Error
-            ? getError(createResult).message
-            : String(getError(createResult));
-        return Err(new Error(`Failed to create workspace: ${message}`));
+          createResult.error instanceof Error
+            ? createResult.error.message
+            : String(createResult.error);
+        return err(new Error(`Failed to create workspace: ${message}`));
       }
 
       // Emit workspace created event for other components to react
@@ -111,7 +111,7 @@ export class CreateWorkspaceTool implements ToolHandler {
       const message = this.buildSuccessMessage(name, description, template);
       context.logger.info(`Workspace created successfully: ${name}`);
 
-      return Ok({
+      return ok({
         content: [
           {
             type: 'text',
@@ -128,7 +128,7 @@ export class CreateWorkspaceTool implements ToolHandler {
         error
       );
 
-      return Err(
+      return err(
         new Error(`Unexpected error creating workspace: ${errorMessage}`)
       );
     }

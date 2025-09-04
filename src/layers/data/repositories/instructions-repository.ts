@@ -1,7 +1,11 @@
 // Instructions Repository Implementation
 import path from 'node:path';
 
+import { inject, injectable } from 'tsyringe';
+
 import { LLM_DIRECTIVE_HEADER } from '../../../config/constants.js';
+import { TOKENS } from '../../../container/tokens.js';
+import type { Logger } from '../../../interfaces/services.js';
 import { createChildLogger } from '../../../utils/logger.js';
 import type {
   FileSystemProvider,
@@ -11,20 +15,24 @@ import type {
   SharedInstructionMetadata,
 } from '../interfaces.js';
 
-const logger = createChildLogger('data:instructions-repository');
-
+@injectable()
 export class FileSystemInstructionsRepository
   implements InstructionsRepository
 {
+  private logger: Logger;
+
   constructor(
-    private fs: FileSystemProvider,
-    private sharedInstructionsPath: string,
-    private globalInstructionsPath: string
-  ) {}
+    @inject(TOKENS.FileSystemService) private fs: FileSystemProvider,
+    @inject('SharedInstructionsPath') private sharedInstructionsPath: string,
+    @inject('GlobalInstructionsPath') private globalInstructionsPath: string,
+    @inject(TOKENS.Logger) logger?: Logger
+  ) {
+    this.logger = logger ?? createChildLogger('data:instructions-repository');
+  }
 
   async listShared(): Promise<SharedInstructionMetadata[]> {
     try {
-      logger.debug(
+      this.logger.debug(
         `Listing shared instructions in: ${this.sharedInstructionsPath}`
       );
 
@@ -55,36 +63,42 @@ export class FileSystemInstructionsRepository
               modifiedAt: stats.modifiedTime,
             });
           } catch (error) {
-            logger.warn(`Skipping invalid instruction file: ${entry}`, error);
+            this.logger.warn(
+              `Skipping invalid instruction file: ${entry}`,
+              error
+            );
           }
         }
       }
 
-      logger.debug(`Found ${instructions.length} shared instructions`);
+      this.logger.debug(`Found ${instructions.length} shared instructions`);
       return instructions.sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
-      logger.error('Failed to list shared instructions', error);
+      this.logger.error('Failed to list shared instructions', error);
       throw new Error('Unable to list shared instructions');
     }
   }
 
   async getShared(name: string): Promise<SharedInstruction> {
-    const filePath = path.join(this.sharedInstructionsPath, `${name}.json`);
+    const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
     try {
-      logger.debug(`Getting shared instruction: ${name}`);
+      this.logger.debug(`Getting shared instruction: ${name}`);
 
       if (!(await this.fs.exists(filePath))) {
         throw new Error(`Shared instruction '${name}' not found`);
       }
 
       const content = await this.fs.readFile(filePath);
-      const instruction = JSON.parse(content) as SharedInstruction;
+      const instruction = this.parseSharedInstructionFromMarkdown(
+        content,
+        name
+      );
 
-      logger.debug(`Retrieved shared instruction: ${name}`);
+      this.logger.debug(`Retrieved shared instruction: ${name}`);
       return instruction;
     } catch (error) {
-      logger.error(`Failed to get shared instruction: ${name}`, error);
+      this.logger.error(`Failed to get shared instruction: ${name}`, error);
       throw error instanceof Error
         ? error
         : new Error(`Unable to get shared instruction: ${name}`);
@@ -98,7 +112,7 @@ export class FileSystemInstructionsRepository
     const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
     try {
-      logger.debug(`Creating shared instruction: ${name}`);
+      this.logger.debug(`Creating shared instruction: ${name}`);
 
       // Ensure directory exists
       await this.fs.createDirectory(this.sharedInstructionsPath, true);
@@ -113,9 +127,9 @@ export class FileSystemInstructionsRepository
         this.formatSharedInstructionAsMarkdown(instruction);
 
       await this.fs.writeFile(filePath, markdownContent);
-      logger.info(`Shared instruction created: ${name}`);
+      this.logger.info(`Shared instruction created: ${name}`);
     } catch (error) {
-      logger.error(`Failed to create shared instruction: ${name}`, error);
+      this.logger.error(`Failed to create shared instruction: ${name}`, error);
       throw error instanceof Error
         ? error
         : new Error(`Unable to create shared instruction: ${name}`);
@@ -123,19 +137,19 @@ export class FileSystemInstructionsRepository
   }
 
   async deleteShared(name: string): Promise<void> {
-    const filePath = path.join(this.sharedInstructionsPath, `${name}.json`);
+    const filePath = path.join(this.sharedInstructionsPath, `${name}.md`);
 
     try {
-      logger.debug(`Deleting shared instruction: ${name}`);
+      this.logger.debug(`Deleting shared instruction: ${name}`);
 
       if (!(await this.fs.exists(filePath))) {
         throw new Error(`Shared instruction '${name}' not found`);
       }
 
       await this.fs.deleteFile(filePath);
-      logger.info(`Shared instruction deleted: ${name}`);
+      this.logger.info(`Shared instruction deleted: ${name}`);
     } catch (error) {
-      logger.error(`Failed to delete shared instruction: ${name}`, error);
+      this.logger.error(`Failed to delete shared instruction: ${name}`, error);
       throw error instanceof Error
         ? error
         : new Error(`Unable to delete shared instruction: ${name}`);
@@ -144,7 +158,7 @@ export class FileSystemInstructionsRepository
 
   async getGlobal(): Promise<GlobalInstructions> {
     try {
-      logger.debug('Getting global instructions');
+      this.logger.debug('Getting global instructions');
 
       if (!(await this.fs.exists(this.globalInstructionsPath))) {
         // Return default global instructions
@@ -164,17 +178,17 @@ export class FileSystemInstructionsRepository
         variables: {},
       };
 
-      logger.debug('Retrieved global instructions');
+      this.logger.debug('Retrieved global instructions');
       return instructions;
     } catch (error) {
-      logger.error('Failed to get global instructions', error);
+      this.logger.error('Failed to get global instructions', error);
       throw new Error('Unable to get global instructions');
     }
   }
 
   async updateGlobal(instructions: GlobalInstructions): Promise<void> {
     try {
-      logger.debug('Updating global instructions');
+      this.logger.debug('Updating global instructions');
 
       // Ensure directory exists
       const dir = path.dirname(this.globalInstructionsPath);
@@ -184,9 +198,9 @@ export class FileSystemInstructionsRepository
         this.globalInstructionsPath,
         JSON.stringify(instructions, null, 2)
       );
-      logger.info('Global instructions updated');
+      this.logger.info('Global instructions updated');
     } catch (error) {
-      logger.error('Failed to update global instructions', error);
+      this.logger.error('Failed to update global instructions', error);
       throw new Error('Unable to update global instructions');
     }
   }
@@ -245,7 +259,7 @@ export class FileSystemInstructionsRepository
         variables: {},
       };
     } catch (error) {
-      logger.error(
+      this.logger.error(
         `Error parsing shared instruction markdown for ${name}:`,
         error
       );

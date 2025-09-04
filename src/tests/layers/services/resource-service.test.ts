@@ -1,3 +1,4 @@
+import { ok } from 'neverthrow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EventBus, Logger } from '../../../interfaces/services.js';
@@ -11,7 +12,6 @@ import type {
   SharedInstruction,
   WorkspaceMetadata,
 } from '../../../types/index.js';
-import { isErr, isOk, Ok } from '../../../utils/result.js';
 
 // Mock logger to avoid console output during tests
 vi.mock('../../../utils/logger.js', () => ({
@@ -108,8 +108,8 @@ describe('ResourceService', () => {
 
       const result = await resourceService.listResources();
 
-      expect(isOk(result)).toBe(true);
-      if (isOk(result)) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value.resources).toHaveLength(3); // workspace + shared instruction + global
 
         // Check workspace resource
@@ -158,8 +158,8 @@ describe('ResourceService', () => {
 
       const result = await resourceService.listResources();
 
-      expect(isOk(result)).toBe(true);
-      if (isOk(result)) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value.resources[0]?.description).toBe(
           'Workspace: test-workspace'
         );
@@ -175,8 +175,8 @@ describe('ResourceService', () => {
 
       const result = await resourceService.listResources();
 
-      expect(isOk(result)).toBe(true);
-      if (isOk(result)) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value.resources).toHaveLength(1); // Only global instructions
         expect(result.value.resources[0]?.uri).toBe('instruction://global');
       }
@@ -197,8 +197,8 @@ describe('ResourceService', () => {
 
       const result = await resourceService.listResources();
 
-      expect(isOk(result)).toBe(true);
-      if (isOk(result)) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value.resources).toHaveLength(5); // 2 workspaces + 2 shared instructions + global
       }
     });
@@ -211,8 +211,8 @@ describe('ResourceService', () => {
 
       const result = await resourceService.listResources();
 
-      expect(isOk(result)).toBe(true);
-      if (isOk(result)) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         // Should still return global instructions even if workspace listing fails
         expect(result.value.resources).toHaveLength(1);
         expect(result.value.resources[0]?.uri).toBe('instruction://global');
@@ -227,8 +227,8 @@ describe('ResourceService', () => {
 
       const result = await resourceService.listResources();
 
-      expect(isOk(result)).toBe(true);
-      if (isOk(result)) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         // Should still return global instructions even if shared instructions listing fails
         expect(result.value.resources).toHaveLength(1);
         expect(result.value.resources[0]?.uri).toBe('instruction://global');
@@ -251,8 +251,8 @@ describe('ResourceService', () => {
           'workspace://test-workspace'
         );
 
-        expect(isOk(result)).toBe(true);
-        if (isOk(result)) {
+        expect(result.isOk()).toBe(true);
+        if (result.isOk()) {
           expect(result.value.contents).toHaveLength(1);
           expect(result.value.contents[0]).toMatchObject({
             uri: 'workspace://test-workspace',
@@ -273,8 +273,8 @@ describe('ResourceService', () => {
           'workspace://non-existent'
         );
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toBe(
             "Workspace 'non-existent' not found"
           );
@@ -298,8 +298,8 @@ describe('ResourceService', () => {
           'workspace://test-workspace'
         );
 
-        expect(isOk(result)).toBe(true);
-        if (isOk(result)) {
+        expect(result.isOk()).toBe(true);
+        if (result.isOk()) {
           const content = JSON.parse(result.value.contents[0]!.text!);
           expect(content.description).toBeUndefined();
         }
@@ -316,8 +316,8 @@ describe('ResourceService', () => {
           'instruction://global'
         );
 
-        expect(isOk(result)).toBe(true);
-        if (isOk(result)) {
+        expect(result.isOk()).toBe(true);
+        if (result.isOk()) {
           expect(result.value.contents).toHaveLength(1);
           expect(result.value.contents[0]).toEqual({
             uri: 'instruction://global',
@@ -336,8 +336,8 @@ describe('ResourceService', () => {
           'instruction://shared/react-guide'
         );
 
-        expect(isOk(result)).toBe(true);
-        if (isOk(result)) {
+        expect(result.isOk()).toBe(true);
+        if (result.isOk()) {
           expect(result.value.contents).toHaveLength(1);
           expect(result.value.contents[0]).toEqual({
             uri: 'instruction://shared/react-guide',
@@ -356,8 +356,8 @@ describe('ResourceService', () => {
           'instruction://invalid/path'
         );
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toContain(
             'Invalid instruction path: invalid/path'
           );
@@ -373,8 +373,8 @@ describe('ResourceService', () => {
           'instruction://global'
         );
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toContain('File not found');
         }
       });
@@ -384,8 +384,8 @@ describe('ResourceService', () => {
       it('should return error for unsupported URI scheme', async () => {
         const result = await resourceService.readResource('http://example.com');
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toContain('Unsupported URI scheme');
         }
       });
@@ -393,8 +393,8 @@ describe('ResourceService', () => {
       it('should return error for invalid URI format', async () => {
         const result = await resourceService.readResource('invalid-uri');
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toContain('Invalid URI format');
         }
       });
@@ -402,8 +402,8 @@ describe('ResourceService', () => {
       it('should return error for URI without path', async () => {
         const result = await resourceService.readResource('workspace://');
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toContain('Invalid URI format');
         }
       });
@@ -417,7 +417,7 @@ describe('ResourceService', () => {
           'instruction://shared/complex/path/name'
         );
 
-        expect(isOk(result)).toBe(true);
+        expect(result.isOk()).toBe(true);
         expect(mockInstructionsRepository.getShared).toHaveBeenCalledWith(
           'complex/path/name'
         );
@@ -433,8 +433,8 @@ describe('ResourceService', () => {
 
         const result = await resourceService.readResource('workspace://test');
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toContain('Specific error message');
         }
       });
@@ -446,8 +446,8 @@ describe('ResourceService', () => {
 
         const result = await resourceService.readResource('workspace://test');
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toContain(
             'Failed to read workspace resource'
           );
@@ -462,8 +462,8 @@ describe('ResourceService', () => {
 
         const result = await resourceService.readResource('workspace://test');
 
-        expect(isErr(result)).toBe(true);
-        if (isErr(result)) {
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
           expect(result.error.message).toContain('Database connection failed');
         }
       });
@@ -473,14 +473,14 @@ describe('ResourceService', () => {
   describe('URI parsing edge cases', () => {
     it('should handle URIs with special characters', async () => {
       vi.mocked(mockInstructionsRepository.getShared).mockResolvedValue(
-        Ok(mockSharedInstruction)
+        ok(mockSharedInstruction)
       );
 
       const result = await resourceService.readResource(
         'instruction://shared/name-with-dashes'
       );
 
-      expect(isOk(result)).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(mockInstructionsRepository.getShared).toHaveBeenCalledWith(
         'name-with-dashes'
       );
@@ -500,7 +500,7 @@ describe('ResourceService', () => {
         'workspace://project123'
       );
 
-      expect(isOk(result)).toBe(true);
+      expect(result.isOk()).toBe(true);
       expect(mockWorkspaceRepository.exists).toHaveBeenCalledWith('project123');
     });
 
@@ -509,8 +509,8 @@ describe('ResourceService', () => {
         'invalid:scheme://path'
       );
 
-      expect(isErr(result)).toBe(true);
-      if (isErr(result)) {
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
         expect(result.error.message).toContain('Invalid URI format');
       }
     });

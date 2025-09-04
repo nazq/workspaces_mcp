@@ -2,11 +2,11 @@
 // Handles listing all available shared instruction files
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import { z } from 'zod';
 
 import type { ToolContext, ToolHandler } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, getError, getValue, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Tool handler for listing all shared instructions
@@ -35,7 +35,7 @@ export class ListSharedInstructionsTool implements ToolHandler {
   async execute(
     args: z.infer<typeof this.inputSchema>,
     context: ToolContext
-  ): Promise<Result<CallToolResult>> {
+  ): Promise<Result<CallToolResult, Error>> {
     try {
       const { includeContent, sortBy } = args;
 
@@ -43,11 +43,11 @@ export class ListSharedInstructionsTool implements ToolHandler {
       const instructionsResult =
         await context.instructionsRepository.listSharedInstructions();
 
-      if (isErr(instructionsResult)) {
-        return Err(getError(instructionsResult));
+      if (instructionsResult.isErr()) {
+        return err(instructionsResult.error);
       }
 
-      const instructions = getValue(instructionsResult);
+      const instructions = instructionsResult.value;
 
       // Sort instructions based on sortBy parameter
       const sortedInstructions = [...instructions].sort((a, b) => {
@@ -97,7 +97,7 @@ export class ListSharedInstructionsTool implements ToolHandler {
             `These instructions can be referenced in workspaces and are available in the resources list.`
           : 'No shared instructions found. Create your first shared instruction using the create_shared_instruction tool.';
 
-      return Ok({
+      return ok({
         content: [
           {
             type: 'text',
@@ -108,7 +108,7 @@ export class ListSharedInstructionsTool implements ToolHandler {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      return Err(new Error(`Failed to list shared instructions: ${message}`));
+      return err(new Error(`Failed to list shared instructions: ${message}`));
     }
   }
 }

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
+import { err, ok } from 'neverthrow';
 import type {
   EventBus,
   Logger,
@@ -8,7 +9,6 @@ import type {
   ToolHandler,
 } from '../../interfaces/services.js';
 import { ToolRegistry } from '../../tools/registry.js';
-import { Err, Ok } from '../../utils/result.js';
 
 // Mock tool handler for testing
 const createMockToolHandler = (name: string = 'test-tool'): ToolHandler => ({
@@ -19,7 +19,7 @@ const createMockToolHandler = (name: string = 'test-tool'): ToolHandler => ({
     count: z.number().optional(),
   }),
   async execute(args: any) {
-    return Ok({
+    return ok({
       content: [
         {
           type: 'text' as const,
@@ -39,7 +39,7 @@ const createFailingToolHandler = (): ToolHandler => ({
     message: z.string(),
   }),
   async execute() {
-    return Err(new Error('Tool execution failed'));
+    return err(new Error('Tool execution failed'));
   },
 });
 
@@ -171,8 +171,8 @@ describe('ToolRegistry', () => {
         mockContext
       );
 
-      expect(result.success).toBe(true);
-      if (result.success) {
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
         expect(result.value.content[0]?.text).toContain('Hello World');
         expect(result.value.isError).toBe(false);
       }
@@ -185,8 +185,8 @@ describe('ToolRegistry', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toBe('Unknown tool: unknown-tool');
       }
     });
@@ -198,8 +198,8 @@ describe('ToolRegistry', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toContain('Invalid arguments');
       }
     });
@@ -211,8 +211,8 @@ describe('ToolRegistry', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toContain('Invalid arguments');
       }
     });
@@ -227,8 +227,8 @@ describe('ToolRegistry', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
-      if (!result.success) {
+      expect(result.isOk()).toBe(false);
+      if (!result.isOk()) {
         expect(result.error.message).toBe('Tool execution failed');
       }
     });
@@ -348,7 +348,7 @@ describe('ToolRegistry', () => {
         mockContext
       );
 
-      expect(result.success).toBe(true);
+      expect(result.isOk()).toBe(true);
     });
 
     it('should handle malformed input gracefully', async () => {
@@ -361,7 +361,7 @@ describe('ToolRegistry', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
+      expect(result.isOk()).toBe(false);
     });
 
     it('should handle undefined arguments', async () => {
@@ -374,7 +374,7 @@ describe('ToolRegistry', () => {
         mockContext
       );
 
-      expect(result.success).toBe(false);
+      expect(result.isOk()).toBe(false);
     });
   });
 

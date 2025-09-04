@@ -5,7 +5,6 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 
 import type { ToolService } from '../../../interfaces/services.js';
-import { getError, getValue, isErr } from '../../../utils/result.js';
 import { BaseController } from '../base.js';
 
 export class ListToolsController extends BaseController<'tools/list'> {
@@ -20,11 +19,11 @@ export class ListToolsController extends BaseController<'tools/list'> {
 
     const result = await this.toolService.listTools();
 
-    if (isErr(result)) {
-      this.handleError(getError(result), 'Failed to list tools');
+    if (result.isErr()) {
+      this.handleError(result.error, 'Failed to list tools');
     }
 
-    const tools = getValue(result);
+    const tools = result.value;
     this.logger.debug(`Listed ${tools.tools.length} tools`);
     return tools;
   }

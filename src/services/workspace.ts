@@ -3,6 +3,9 @@
 
 import * as path from 'node:path';
 
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
+
 import { EVENTS } from '../events/events.js';
 import type {
   EventBus,
@@ -17,8 +20,6 @@ import {
   WorkspaceAlreadyExistsError,
   WorkspaceNotFoundError,
 } from '../utils/errors.js';
-import type { Result } from '../utils/result.js';
-import { Err, getError, getValue, isErr, Ok } from '../utils/result.js';
 import { DEFAULT_WORKSPACE_README } from '../utils/templates.js';
 import { validateWorkspaceName } from '../utils/validation.js';
 
@@ -38,7 +39,7 @@ import { validateWorkspaceName } from '../utils/validation.js';
  *   template: 'react'
  * });
  *
- * if (isOk(result)) {
+ * if (result.isOk()) {
  *   console.log(`Created workspace: ${result.data.name}`);
  * } else {
  *   console.error(`Failed: ${result.error.message}`);
@@ -75,40 +76,40 @@ export class WorkspaceService implements IWorkspaceService {
   async createWorkspace(
     name: string,
     options: WorkspaceCreateOptions = {}
-  ): Promise<Result<WorkspaceMetadata>> {
+  ): Promise<Result<WorkspaceMetadata, Error>> {
     try {
       this.logger.info(`Creating workspace: ${name}`, { options });
 
       // Validate workspace name for security and consistency
       const validationResult = this.validateWorkspaceName(name);
-      if (isErr(validationResult)) {
-        return validationResult;
+      if (validationResult.isErr()) {
+        return err(validationResult.error);
       }
 
       const workspacePath = path.join(this.workspacesRoot, name);
 
       // Check if workspace already exists
       const existsResult = await this.fs.directoryExists(workspacePath);
-      if (isErr(existsResult)) {
-        return Err(
+      if (existsResult.isErr()) {
+        return err(
           new Error(
-            `Failed to check workspace existence: ${getError(existsResult).message}`
+            `Failed to check workspace existence: ${existsResult.error.message}`
           )
         );
       }
 
-      if (getValue(existsResult)) {
+      if (existsResult.value) {
         const error = new WorkspaceAlreadyExistsError(name);
         this.logger.warn(`Workspace creation failed: ${error.message}`);
-        return Err(error);
+        return err(error);
       }
 
       // Create workspace directory
       const createDirResult = await this.fs.ensureDirectory(workspacePath);
-      if (isErr(createDirResult)) {
-        return Err(
+      if (createDirResult.isErr()) {
+        return err(
           new Error(
-            `Failed to create workspace directory: ${getError(createDirResult).message}`
+            `Failed to create workspace directory: ${createDirResult.error.message}`
           )
         );
       }
@@ -119,9 +120,9 @@ export class WorkspaceService implements IWorkspaceService {
         readmePath,
         DEFAULT_WORKSPACE_README(name)
       );
-      if (isErr(writeResult)) {
-        return Err(
-          new Error(`Failed to create README: ${getError(writeResult).message}`)
+      if (writeResult.isErr()) {
+        return err(
+          new Error(`Failed to create README: ${writeResult.error.message}`)
         );
       }
 
@@ -156,11 +157,11 @@ export class WorkspaceService implements IWorkspaceService {
       }
 
       this.logger.info(`Workspace created successfully: ${name}`);
-      return Ok(workspace);
+      return ok(workspace);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Unexpected error creating workspace: ${name}`, error);
-      return Err(new Error(`Workspace creation failed: ${message}`));
+      return err(new Error(`Workspace creation failed: ${message}`));
     }
   }
 
@@ -173,7 +174,7 @@ export class WorkspaceService implements IWorkspaceService {
    *
    * @returns Result containing array of workspace metadata
    */
-  async listWorkspaces(): Promise<Result<WorkspaceMetadata[]>> {
+  async listWorkspaces(): Promise<Result<WorkspaceMetadata[], Error>> {
     try {
       this.logger.debug('Listing workspaces', {
         workspacesRoot: this.workspacesRoot,
@@ -183,34 +184,34 @@ export class WorkspaceService implements IWorkspaceService {
       const rootExistsResult = await this.fs.directoryExists(
         this.workspacesRoot
       );
-      if (isErr(rootExistsResult)) {
-        return Err(
+      if (rootExistsResult.isErr()) {
+        return err(
           new Error(
-            `Failed to check workspaces root: ${getError(rootExistsResult).message}`
+            `Failed to check workspaces root: ${rootExistsResult.error.message}`
           )
         );
       }
 
-      if (!getValue(rootExistsResult)) {
+      if (!rootExistsResult.value) {
         this.logger.debug(
           'Workspaces root does not exist, returning empty list'
         );
-        return Ok([]);
+        return ok([]);
       }
 
       // List directory contents (get directories only)
       const directoriesResult = await this.fs.listDirectories(
         this.workspacesRoot
       );
-      if (isErr(directoriesResult)) {
-        return Err(
+      if (directoriesResult.isErr()) {
+        return err(
           new Error(
-            `Failed to list workspace directory: ${getError(directoriesResult).message}`
+            `Failed to list workspace directory: ${directoriesResult.error.message}`
           )
         );
       }
 
-      const directoryItems = getValue(directoriesResult);
+      const directoryItems = directoriesResult.value;
 
       const workspaces: WorkspaceMetadata[] = [];
 
@@ -223,25 +224,25 @@ export class WorkspaceService implements IWorkspaceService {
         const workspacePath = path.join(this.workspacesRoot, item);
         const isDirResult = await this.fs.directoryExists(workspacePath);
 
-        if (isErr(isDirResult)) {
+        if (isDirResult.isErr()) {
           this.logger.warn(
             `Failed to check if ${item} is directory`,
-            getError(isDirResult)
+            isDirResult.error
           );
           continue;
         }
 
-        if (getValue(isDirResult)) {
+        if (isDirResult.value) {
           // Get workspace metadata, skip if invalid
           const workspaceResult = await this.getWorkspaceInfo(item);
-          if (isErr(workspaceResult)) {
+          if (workspaceResult.isErr()) {
             this.logger.warn(
               `Skipping invalid workspace: ${item}`,
-              getError(workspaceResult)
+              workspaceResult.error
             );
             continue;
           }
-          workspaces.push(getValue(workspaceResult));
+          workspaces.push(workspaceResult.value);
         }
       }
 
@@ -251,11 +252,11 @@ export class WorkspaceService implements IWorkspaceService {
       );
 
       this.logger.debug(`Found ${sortedWorkspaces.length} workspaces`);
-      return Ok(sortedWorkspaces);
+      return ok(sortedWorkspaces);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Unexpected error listing workspaces', error);
-      return Err(new Error(`Failed to list workspaces: ${message}`));
+      return err(new Error(`Failed to list workspaces: ${message}`));
     }
   }
 
@@ -268,71 +269,73 @@ export class WorkspaceService implements IWorkspaceService {
    * @param name - Workspace name to retrieve info for
    * @returns Result containing workspace metadata or error
    */
-  async getWorkspaceInfo(name: string): Promise<Result<WorkspaceMetadata>> {
+  async getWorkspaceInfo(
+    name: string
+  ): Promise<Result<WorkspaceMetadata, Error>> {
     try {
       this.logger.debug(`Getting workspace info: ${name}`);
 
       // Validate workspace name
       const validationResult = this.validateWorkspaceName(name);
-      if (isErr(validationResult)) {
-        return validationResult;
+      if (validationResult.isErr()) {
+        return err(validationResult.error);
       }
 
       const workspacePath = path.join(this.workspacesRoot, name);
 
       // Check if workspace exists
       const existsResult = await this.fs.directoryExists(workspacePath);
-      if (isErr(existsResult)) {
-        return Err(
+      if (existsResult.isErr()) {
+        return err(
           new Error(
-            `Failed to check workspace existence: ${getError(existsResult).message}`
+            `Failed to check workspace existence: ${existsResult.error.message}`
           )
         );
       }
 
-      if (!getValue(existsResult)) {
+      if (!existsResult.value) {
         const error = new WorkspaceNotFoundError(name);
         this.logger.warn(`Workspace not found: ${name}`);
-        return Err(error);
+        return err(error);
       }
 
       // Get file list and statistics
       const filesResult = await this.fs.listFiles(workspacePath, true);
-      if (isErr(filesResult)) {
-        return Err(
+      if (filesResult.isErr()) {
+        return err(
           new Error(
-            `Failed to list workspace files: ${getError(filesResult).message}`
+            `Failed to list workspace files: ${filesResult.error.message}`
           )
         );
       }
 
       const statsResult = await this.fs.getFileStats(workspacePath);
-      if (isErr(statsResult)) {
-        return Err(
+      if (statsResult.isErr()) {
+        return err(
           new Error(
-            `Failed to get workspace stats: ${getError(statsResult).message}`
+            `Failed to get workspace stats: ${statsResult.error.message}`
           )
         );
       }
 
       // Calculate total size of workspace files
       let totalSize = 0;
-      for (const file of getValue(filesResult)) {
+      for (const file of filesResult.value) {
         const filePath = path.join(workspacePath, file);
         const fileStatsResult = await this.fs.getFileStats(filePath);
-        if (!isErr(fileStatsResult) && !getValue(fileStatsResult).isDirectory) {
-          totalSize += getValue(fileStatsResult).size;
+        if (!fileStatsResult.isErr() && !fileStatsResult.value.isDirectory) {
+          totalSize += fileStatsResult.value.size;
         }
       }
 
       const workspace: WorkspaceMetadata = {
         name,
         path: workspacePath,
-        createdAt: getValue(statsResult).createdAt,
-        updatedAt: getValue(statsResult).updatedAt,
-        fileCount: getValue(filesResult).length,
+        createdAt: statsResult.value.createdAt,
+        updatedAt: statsResult.value.updatedAt,
+        fileCount: filesResult.value.length,
         size: totalSize,
-        files: getValue(filesResult),
+        files: filesResult.value,
       };
 
       // Emit workspace accessed event
@@ -350,14 +353,14 @@ export class WorkspaceService implements IWorkspaceService {
         });
       }
 
-      return Ok(workspace);
+      return ok(workspace);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
         `Unexpected error getting workspace info: ${name}`,
         error
       );
-      return Err(new Error(`Failed to get workspace info: ${message}`));
+      return err(new Error(`Failed to get workspace info: ${message}`));
     }
   }
 
@@ -370,40 +373,40 @@ export class WorkspaceService implements IWorkspaceService {
    * @param name - Name of workspace to delete
    * @returns Result indicating success or detailed error
    */
-  async deleteWorkspace(name: string): Promise<Result<void>> {
+  async deleteWorkspace(name: string): Promise<Result<void, Error>> {
     try {
       this.logger.info(`Deleting workspace: ${name}`);
 
       // Validate workspace name
       const validationResult = this.validateWorkspaceName(name);
-      if (isErr(validationResult)) {
-        return validationResult;
+      if (validationResult.isErr()) {
+        return err(validationResult.error);
       }
 
       const workspacePath = path.join(this.workspacesRoot, name);
 
       // Check if workspace exists
       const existsResult = await this.fs.directoryExists(workspacePath);
-      if (isErr(existsResult)) {
-        return Err(
+      if (existsResult.isErr()) {
+        return err(
           new Error(
-            `Failed to check workspace existence: ${getError(existsResult).message}`
+            `Failed to check workspace existence: ${existsResult.error.message}`
           )
         );
       }
 
-      if (!getValue(existsResult)) {
+      if (!existsResult.value) {
         const error = new WorkspaceNotFoundError(name);
         this.logger.warn(`Delete failed - workspace not found: ${name}`);
-        return Err(error);
+        return err(error);
       }
 
       // Delete workspace directory and all contents
       const deleteResult = await this.fs.deleteDirectory(workspacePath);
-      if (isErr(deleteResult)) {
-        return Err(
+      if (deleteResult.isErr()) {
+        return err(
           new Error(
-            `Failed to delete workspace directory: ${getError(deleteResult).message}`
+            `Failed to delete workspace directory: ${deleteResult.error.message}`
           )
         );
       }
@@ -423,11 +426,11 @@ export class WorkspaceService implements IWorkspaceService {
       }
 
       this.logger.info(`Workspace deleted successfully: ${name}`);
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Unexpected error deleting workspace: ${name}`, error);
-      return Err(new Error(`Workspace deletion failed: ${message}`));
+      return err(new Error(`Workspace deletion failed: ${message}`));
     }
   }
 
@@ -444,7 +447,7 @@ export class WorkspaceService implements IWorkspaceService {
   async validateWorkspaceFile(
     workspaceName: string,
     relativePath: string
-  ): Promise<Result<void>> {
+  ): Promise<Result<void, Error>> {
     try {
       this.logger.debug(
         `Validating workspace file: ${workspaceName}/${relativePath}`
@@ -452,7 +455,7 @@ export class WorkspaceService implements IWorkspaceService {
 
       // Validate workspace name
       const validationResult = this.validateWorkspaceName(workspaceName);
-      if (isErr(validationResult)) {
+      if (validationResult.isErr()) {
         return validationResult;
       }
 
@@ -460,17 +463,17 @@ export class WorkspaceService implements IWorkspaceService {
 
       // Check if workspace exists
       const existsResult = await this.fs.directoryExists(workspacePath);
-      if (isErr(existsResult)) {
-        return Err(
+      if (existsResult.isErr()) {
+        return err(
           new Error(
-            `Failed to check workspace existence: ${getError(existsResult).message}`
+            `Failed to check workspace existence: ${existsResult.error.message}`
           )
         );
       }
 
-      if (!getValue(existsResult)) {
+      if (!existsResult.value) {
         const error = new WorkspaceNotFoundError(workspaceName);
-        return Err(error);
+        return err(error);
       }
 
       const filePath = path.join(workspacePath, relativePath);
@@ -493,28 +496,28 @@ export class WorkspaceService implements IWorkspaceService {
           resolvedFilePath,
           resolvedWorkspacePath,
         });
-        return Err(error);
+        return err(error);
       }
 
       // Check if file exists
       const fileExistsResult = await this.fs.fileExists(filePath);
-      if (isErr(fileExistsResult)) {
-        return Err(
+      if (fileExistsResult.isErr()) {
+        return err(
           new Error(
-            `Failed to check file existence: ${getError(fileExistsResult).message}`
+            `Failed to check file existence: ${fileExistsResult.error.message}`
           )
         );
       }
 
-      if (!getValue(fileExistsResult)) {
-        return Err(new Error(`File does not exist: ${relativePath}`));
+      if (!fileExistsResult.value) {
+        return err(new Error(`File does not exist: ${relativePath}`));
       }
 
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Unexpected error validating workspace file`, error);
-      return Err(new Error(`File validation failed: ${message}`));
+      return err(new Error(`File validation failed: ${message}`));
     }
   }
 
@@ -524,18 +527,18 @@ export class WorkspaceService implements IWorkspaceService {
    * @param name - Workspace name to check
    * @returns Result containing boolean existence status
    */
-  async workspaceExists(name: string): Promise<Result<boolean>> {
+  async workspaceExists(name: string): Promise<Result<boolean, Error>> {
     try {
       const validationResult = this.validateWorkspaceName(name);
-      if (isErr(validationResult)) {
-        return validationResult;
+      if (validationResult.isErr()) {
+        return err(validationResult.error);
       }
 
       const workspacePath = path.join(this.workspacesRoot, name);
       return await this.fs.directoryExists(workspacePath);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return Err(new Error(`Failed to check workspace existence: ${message}`));
+      return err(new Error(`Failed to check workspace existence: ${message}`));
     }
   }
 
@@ -549,17 +552,17 @@ export class WorkspaceService implements IWorkspaceService {
   async updateWorkspace(
     name: string,
     options: Partial<WorkspaceCreateOptions>
-  ): Promise<Result<WorkspaceMetadata>> {
+  ): Promise<Result<WorkspaceMetadata, Error>> {
     try {
       this.logger.info(`Updating workspace: ${name}`, { options });
 
       // Get current workspace info to ensure it exists
       const currentResult = await this.getWorkspaceInfo(name);
-      if (isErr(currentResult)) {
+      if (currentResult.isErr()) {
         return currentResult;
       }
 
-      const current = getValue(currentResult);
+      const current = currentResult.value;
       const updatedWorkspace: WorkspaceMetadata = {
         ...current,
         description: options.description ?? current.description,
@@ -586,11 +589,11 @@ export class WorkspaceService implements IWorkspaceService {
       }
 
       this.logger.info(`Workspace updated successfully: ${name}`);
-      return Ok(updatedWorkspace);
+      return ok(updatedWorkspace);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Unexpected error updating workspace: ${name}`, error);
-      return Err(new Error(`Workspace update failed: ${message}`));
+      return err(new Error(`Workspace update failed: ${message}`));
     }
   }
 
@@ -600,13 +603,13 @@ export class WorkspaceService implements IWorkspaceService {
    * @param name - Workspace name
    * @returns Result containing workspace path
    */
-  async getWorkspacePath(name: string): Promise<Result<string>> {
+  async getWorkspacePath(name: string): Promise<Result<string, Error>> {
     const validationResult = this.validateWorkspaceName(name);
-    if (isErr(validationResult)) {
-      return validationResult;
+    if (validationResult.isErr()) {
+      return err(validationResult.error);
     }
 
-    return Ok(path.join(this.workspacesRoot, name));
+    return ok(path.join(this.workspacesRoot, name));
   }
 
   /**
@@ -618,13 +621,13 @@ export class WorkspaceService implements IWorkspaceService {
    * @param name - Workspace name to validate
    * @returns Result indicating validation success or detailed error
    */
-  private validateWorkspaceName(name: string): Result<void> {
+  private validateWorkspaceName(name: string): Result<void, Error> {
     try {
       validateWorkspaceName(name);
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return Err(new Error(`Invalid workspace name: ${message}`));
+      return err(new Error(`Invalid workspace name: ${message}`));
     }
   }
 
@@ -638,8 +641,8 @@ export class WorkspaceService implements IWorkspaceService {
       workspaceName,
       relativePath
     );
-    if (isErr(result)) {
-      throw getError(result);
+    if (result.isErr()) {
+      throw result.error;
     }
   }
 }

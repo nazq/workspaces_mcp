@@ -3,6 +3,7 @@
 // Workspaces MCP CLI - Direct tool testing and debugging interface
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import 'reflect-metadata';
 
 import { CliRunner } from '../layers/cli/index.js';
 import {
@@ -22,17 +23,20 @@ async function main(): Promise<void> {
     process.env.WORKSPACES_ROOT || join(__dirname, '../../tmp/test-workspaces');
 
   try {
-    // Initialize data layer
-    const fileSystemProvider = new NodeFileSystemProvider();
+    // Initialize logger first
+    const logger = createChildLogger('cli');
+
+    // Initialize data layer with logger
+    const fileSystemProvider = new NodeFileSystemProvider(logger);
     const workspaceRepository = new FileSystemWorkspaceRepository(
       fileSystemProvider,
-      workspacesRoot
+      workspacesRoot,
+      logger
     );
     // Repository setup for future compatibility
 
     // Initialize services layer
-    const toolRegistry = new ToolRegistry();
-    const logger = createChildLogger('cli');
+    const toolRegistry = new ToolRegistry(logger);
     const toolService = new ToolService(toolRegistry, logger);
 
     // Initialize CLI runner

@@ -6,15 +6,17 @@ import type {
   ReadResourceResult,
   Resource,
 } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
+import { inject, injectable } from 'tsyringe';
 
+import { TOKENS } from '../../container/tokens.js';
 import { EVENTS } from '../../events/events.js';
 import type {
   EventBus,
   ResourceService as IResourceService,
   Logger,
 } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, getError, getValue, isErr, Ok } from '../../utils/result.js';
 import type {
   InstructionsRepository,
   WorkspaceRepository,
@@ -31,13 +33,14 @@ import type {
  * ```typescript
  * const listResult = await resourceService.listResources();
  *
- * if (isOk(listResult)) {
+ * if (listResult.isOk()) {
  *   console.log(`Found ${listResult.value.resources.length} resources`);
  * } else {
- *   getError(console)(`Failed to list resources: ${getError(listResult).message}`);
+ *   console.error(`Failed to list resources: ${listResult.error.message}`);
  * }
  * ```
  */
+@injectable()
 export class ResourceService implements IResourceService {
   /**
    * Create resource service with clean dependency injection
@@ -48,10 +51,12 @@ export class ResourceService implements IResourceService {
    * @param logger - Logger for comprehensive monitoring
    */
   constructor(
+    @inject(TOKENS.WorkspaceRepository)
     private readonly workspaceRepository: WorkspaceRepository,
+    @inject(TOKENS.InstructionsRepository)
     private readonly instructionsRepository: InstructionsRepository,
-    private readonly eventBus: EventBus,
-    private readonly logger: Logger
+    @inject(TOKENS.EventBus) private readonly eventBus: EventBus,
+    @inject(TOKENS.Logger) private readonly logger: Logger
   ) {}
 
   /**
@@ -63,7 +68,7 @@ export class ResourceService implements IResourceService {
    *
    * @returns Result containing list of all discoverable resources
    */
-  async listResources(): Promise<Result<ListResourcesResult>> {
+  async listResources(): Promise<Result<ListResourcesResult, Error>> {
     const startTime = Date.now();
 
     try {
@@ -146,7 +151,7 @@ export class ResourceService implements IResourceService {
         { responseTimeMs }
       );
 
-      return Ok({ resources });
+      return ok({ resources });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const responseTimeMs = Date.now() - startTime;
@@ -175,7 +180,7 @@ export class ResourceService implements IResourceService {
         this.logger.warn('Failed to emit resource error event', eventError);
       }
 
-      return Err(new Error(`Resource discovery failed: ${message}`));
+      return err(new Error(`Resource discovery failed: ${message}`));
     }
   }
 
@@ -189,7 +194,7 @@ export class ResourceService implements IResourceService {
    * @param uri - Resource URI to read (workspace://, instruction://)
    * @returns Result containing resource content or detailed error
    */
-  async readResource(uri: string): Promise<Result<ReadResourceResult>> {
+  async readResource(uri: string): Promise<Result<ReadResourceResult, Error>> {
     const startTime = Date.now();
 
     try {
@@ -207,12 +212,12 @@ export class ResourceService implements IResourceService {
 
       // Parse and validate URI
       const parseResult = this.parseUri(uri);
-      if (isErr(parseResult)) {
-        return parseResult;
+      if (parseResult.isErr()) {
+        return err(parseResult.error);
       }
 
-      const { scheme, path } = getValue(parseResult);
-      let result: Result<ReadResourceResult>;
+      const { scheme, path } = parseResult.value;
+      let result: Result<ReadResourceResult, Error>;
 
       // Route to appropriate handler based on scheme
       switch (scheme) {
@@ -236,18 +241,18 @@ export class ResourceService implements IResourceService {
             scheme,
             supportedSchemes: ['workspace', 'instruction'],
           });
-          return Err(error);
+          return err(error);
         }
       }
 
       const responseTimeMs = Date.now() - startTime;
 
-      if (isErr(result)) {
+      if (result.isErr()) {
         // Emit error event
         try {
           await this.eventBus.emit(EVENTS.RESOURCE_ERROR, {
             uri,
-            error: getError(result),
+            error: result.error,
             timestamp: new Date(),
           });
         } catch (eventError) {
@@ -257,24 +262,21 @@ export class ResourceService implements IResourceService {
       }
 
       // Emit success event
-      const contentLength = getValue(result).contents.reduce(
-        (total, content) => {
-          if (content.text && typeof content.text === 'string') {
-            return total + content.text.length;
-          }
-          if (content.blob) {
-            // Blob content type {} doesn't have length - just count as present
-            return total;
-          }
+      const contentLength = result.value.contents.reduce((total, content) => {
+        if (content.text && typeof content.text === 'string') {
+          return total + content.text.length;
+        }
+        if (content.blob) {
+          // Blob content type {} doesn't have length - just count as present
           return total;
-        },
-        0
-      );
+        }
+        return total;
+      }, 0);
 
       try {
         await this.eventBus.emit(EVENTS.RESOURCE_SERVED, {
           uri,
-          contentType: getValue(result).contents[0]?.mimeType,
+          contentType: result.value.contents[0]?.mimeType,
           contentLength,
           responseTimeMs,
           timestamp: new Date(),
@@ -298,7 +300,7 @@ export class ResourceService implements IResourceService {
         responseTimeMs,
       });
 
-      return Err(new Error(`Resource read failed: ${message}`));
+      return err(new Error(`Resource read failed: ${message}`));
     }
   }
 
@@ -310,14 +312,14 @@ export class ResourceService implements IResourceService {
    */
   private async readWorkspaceResource(
     workspaceName: string
-  ): Promise<Result<ReadResourceResult>> {
+  ): Promise<Result<ReadResourceResult, Error>> {
     try {
       this.logger.debug(`Reading workspace resource: ${workspaceName}`);
 
       // Check if workspace exists
       const exists = await this.workspaceRepository.exists(workspaceName);
       if (!exists) {
-        return Err(new Error(`Workspace '${workspaceName}' not found`));
+        return err(new Error(`Workspace '${workspaceName}' not found`));
       }
 
       // Get workspace metadata
@@ -341,7 +343,7 @@ export class ResourceService implements IResourceService {
 
       const content = JSON.stringify(workspaceInfo, null, 2);
 
-      return Ok({
+      return ok({
         contents: [
           {
             uri: `workspace://${workspaceName}`,
@@ -356,7 +358,7 @@ export class ResourceService implements IResourceService {
         `Unexpected error reading workspace resource: ${workspaceName}`,
         error
       );
-      return Err(new Error(`Failed to read workspace resource: ${message}`));
+      return err(new Error(`Failed to read workspace resource: ${message}`));
     }
   }
 
@@ -368,7 +370,7 @@ export class ResourceService implements IResourceService {
    */
   private async readInstructionResource(
     path: string
-  ): Promise<Result<ReadResourceResult>> {
+  ): Promise<Result<ReadResourceResult, Error>> {
     try {
       this.logger.debug(`Reading instruction resource: ${path}`);
 
@@ -377,7 +379,7 @@ export class ResourceService implements IResourceService {
         try {
           const globalInstructions =
             await this.instructionsRepository.getGlobal();
-          return Ok({
+          return ok({
             contents: [
               {
                 uri: 'instruction://global',
@@ -387,7 +389,7 @@ export class ResourceService implements IResourceService {
             ],
           });
         } catch (error) {
-          return Err(
+          return err(
             new Error(
               `Failed to get global instructions: ${error instanceof Error ? error.message : String(error)}`
             )
@@ -400,13 +402,13 @@ export class ResourceService implements IResourceService {
         const instructionName = path.substring('shared/'.length);
 
         if (!instructionName || instructionName.trim() === '') {
-          return Err(new Error('Invalid shared instruction name: empty'));
+          return err(new Error('Invalid shared instruction name: empty'));
         }
 
         try {
           const sharedInstruction =
             await this.instructionsRepository.getShared(instructionName);
-          return Ok({
+          return ok({
             contents: [
               {
                 uri: `instruction://shared/${instructionName}`,
@@ -416,7 +418,7 @@ export class ResourceService implements IResourceService {
             ],
           });
         } catch (error) {
-          return Err(
+          return err(
             new Error(
               `Failed to get shared instruction '${instructionName}': ${error instanceof Error ? error.message : String(error)}`
             )
@@ -424,7 +426,7 @@ export class ResourceService implements IResourceService {
         }
       }
 
-      return Err(
+      return err(
         new Error(
           `Invalid instruction path: ${path}. ` +
             `Valid paths: 'global' or 'shared/{name}'`
@@ -436,7 +438,7 @@ export class ResourceService implements IResourceService {
         `Unexpected error reading instruction resource: ${path}`,
         error
       );
-      return Err(new Error(`Failed to read instruction resource: ${message}`));
+      return err(new Error(`Failed to read instruction resource: ${message}`));
     }
   }
 
@@ -446,15 +448,17 @@ export class ResourceService implements IResourceService {
    * @param uri - URI to parse
    * @returns Result containing parsed scheme and path
    */
-  private parseUri(uri: string): Result<{ scheme: string; path: string }> {
+  private parseUri(
+    uri: string
+  ): Result<{ scheme: string; path: string }, Error> {
     try {
       if (typeof uri !== 'string' || uri.trim() === '') {
-        return Err(new Error('URI cannot be empty'));
+        return err(new Error('URI cannot be empty'));
       }
 
       const match = uri.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):\/\/(.+)$/);
       if (!match) {
-        return Err(
+        return err(
           new Error(
             `Invalid URI format: '${uri}'. ` +
               `Expected format: scheme://path (e.g., workspace://my-project)`
@@ -468,7 +472,7 @@ export class ResourceService implements IResourceService {
       // Validate scheme
       const supportedSchemes = ['workspace', 'instruction'];
       if (!supportedSchemes.includes(scheme)) {
-        return Err(
+        return err(
           new Error(
             `Unsupported URI scheme: '${scheme}'. ` +
               `Supported schemes: ${supportedSchemes.join(', ')}`
@@ -478,13 +482,13 @@ export class ResourceService implements IResourceService {
 
       // Validate path is not empty
       if (!path || path.trim() === '') {
-        return Err(new Error(`URI path cannot be empty: '${uri}'`));
+        return err(new Error(`URI path cannot be empty: '${uri}'`));
       }
 
-      return Ok({ scheme, path });
+      return ok({ scheme, path });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return Err(new Error(`URI parsing failed: ${message}`));
+      return err(new Error(`URI parsing failed: ${message}`));
     }
   }
 }

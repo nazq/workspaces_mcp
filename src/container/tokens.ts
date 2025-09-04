@@ -38,6 +38,7 @@ export const TOKENS = {
 
   // Configuration
   AppConfig: Symbol('AppConfig'),
+  ConfigService: Symbol('ConfigService'),
 } as const;
 
 // Type helpers for stronger typing

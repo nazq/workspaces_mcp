@@ -8,9 +8,9 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ok } from 'neverthrow';
 import type { ToolService } from '../../../../interfaces/services.js';
 import { CallToolController } from '../../../../layers/controllers/tools/call-controller.js';
-import { Ok } from '../../../../utils/result.js';
 
 const mockToolService: ToolService = {
   callTool: vi.fn(),
@@ -40,7 +40,7 @@ describe('CallToolController', () => {
         ],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
+      vi.mocked(mockToolService.callTool).mockResolvedValue(ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -75,7 +75,7 @@ describe('CallToolController', () => {
         ],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
+      vi.mocked(mockToolService.callTool).mockResolvedValue(ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -116,7 +116,7 @@ describe('CallToolController', () => {
         },
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
+      vi.mocked(mockToolService.callTool).mockResolvedValue(ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -177,7 +177,7 @@ describe('CallToolController', () => {
         content: [{ type: 'text', text: 'Handled undefined args' }],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
+      vi.mocked(mockToolService.callTool).mockResolvedValue(ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -204,7 +204,7 @@ describe('CallToolController', () => {
         ],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(mockResult));
+      vi.mocked(mockToolService.callTool).mockResolvedValue(ok(mockResult));
 
       const request: CallToolRequest = {
         params: {
@@ -231,7 +231,7 @@ describe('CallToolController', () => {
         ],
       };
 
-      vi.mocked(mockToolService.callTool).mockResolvedValue(Ok(originalResult));
+      vi.mocked(mockToolService.callTool).mockResolvedValue(ok(originalResult));
 
       const request: CallToolRequest = {
         params: {

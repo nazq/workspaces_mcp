@@ -9,6 +9,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+// Helper to strip ANSI color codes
+const stripAnsi = (str: string): string => {
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
+};
+
 // Helper function to poll for log content efficiently
 async function waitForLogContent(
   logFile: string,
@@ -57,8 +62,9 @@ describe('Binary Entry Points Integration', () => {
 
       // CLI exits with code 1 when no command specified, but shows help
       expect(result.code).toBe(1);
-      expect(result.stdout).toContain('✓ Workspaces MCP CLI');
-      expect(result.stderr).toContain('✗ No command specified');
+      // Strip ANSI codes and check for text content
+      expect(stripAnsi(result.stdout)).toContain('✓ Workspaces MCP CLI');
+      expect(stripAnsi(result.stderr)).toContain('✗ No command specified');
     });
 
     it('should handle verbose flag', async () => {

@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: ['./src/tests/test-setup.ts'],
     // Disable file watching to prevent EMFILE issues
     watch: false,
     // Reduce parallelism to avoid too many open files
@@ -26,6 +27,11 @@ export default defineConfig({
         'tests/fixtures/**',
         'scripts/**',
         'src/tests/**',
+        'src/bin/**', // Entry point scripts
+        'src/interfaces/**', // Type definitions only
+        'src/types/**', // Type definitions only
+        'src/container/tokens.ts', // Token definitions only
+        'src/layers/index.ts', // Barrel export only
       ],
       thresholds: {
         global: {

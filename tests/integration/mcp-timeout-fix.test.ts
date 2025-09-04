@@ -44,6 +44,10 @@ describe('MCP Server Timeout Fix', () => {
       stdio: 'pipe',
     });
 
+    // Fix MaxListenersExceeded warning
+    mcpServer.stdout?.setMaxListeners(30);
+    mcpServer.stderr?.setMaxListeners(30);
+
     // Debug server output
     let serverOutput = '';
     let serverErrors = '';

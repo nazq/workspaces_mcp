@@ -5,7 +5,6 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 
 import type { ResourceService } from '../../../interfaces/services.js';
-import { getError, getValue, isErr } from '../../../utils/result.js';
 import { BaseController } from '../base.js';
 
 export class ReadResourceController extends BaseController<'resources/read'> {
@@ -21,11 +20,11 @@ export class ReadResourceController extends BaseController<'resources/read'> {
 
     const result = await this.resourceService.readResource(uri);
 
-    if (isErr(result)) {
-      this.handleError(getError(result), `Failed to read resource: ${uri}`);
+    if (result.isErr()) {
+      this.handleError(result.error, `Failed to read resource: ${uri}`);
     }
 
-    const resource = getValue(result);
+    const resource = result.value;
     this.logger.debug(`Successfully read resource: ${uri}`);
     return resource;
   }

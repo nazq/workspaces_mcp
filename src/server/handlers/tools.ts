@@ -20,7 +20,6 @@ import type {
   WorkspaceCreateOptions,
 } from '../../types/index.js';
 import { createChildLogger } from '../../utils/logger.js';
-import { getError, getValue, isErr } from '../../utils/result.js';
 
 export class ToolHandler {
   private instructionsService: InstructionsService;
@@ -30,9 +29,9 @@ export class ToolHandler {
     const root = workspacesRoot ?? getDefaultWorkspacesRoot();
 
     // Create required dependencies
-    const fs: FileSystemService = new NodeFileSystemService();
-    const eventBus: EventBus = new AsyncEventBus();
     const logger: Logger = createChildLogger('ToolHandler');
+    const fs: FileSystemService = new NodeFileSystemService();
+    const eventBus: EventBus = new AsyncEventBus(logger);
 
     this.instructionsService = new InstructionsService(root);
     this.workspaceService = new WorkspaceService(root, fs, eventBus, logger);
@@ -175,12 +174,12 @@ export class ToolHandler {
       options
     );
 
-    if (isErr(workspaceResult)) {
+    if (workspaceResult.isErr()) {
       return {
         content: [
           {
             type: 'text',
-            text: `❌ Failed to create workspace "${parsed.name}": ${getError(workspaceResult) instanceof Error ? getError(workspaceResult).message : 'Unknown error'}`,
+            text: `❌ Failed to create workspace "${parsed.name}": ${workspaceResult.error instanceof Error ? workspaceResult.error.message : 'Unknown error'}`,
           },
         ],
         isError: true,
@@ -191,7 +190,7 @@ export class ToolHandler {
       content: [
         {
           type: 'text',
-          text: `✅ Created workspace "${parsed.name}" successfully!\n\nWorkspace details:\n${JSON.stringify(getValue(workspaceResult), null, 2)}`,
+          text: `✅ Created workspace "${parsed.name}" successfully!\n\nWorkspace details:\n${JSON.stringify(workspaceResult.value, null, 2)}`,
         },
       ],
     };
@@ -200,19 +199,19 @@ export class ToolHandler {
   private async listWorkspaces(): Promise<CallToolResult> {
     const workspacesResult = await this.workspaceService.listWorkspaces();
 
-    if (isErr(workspacesResult)) {
+    if (workspacesResult.isErr()) {
       return {
         content: [
           {
             type: 'text',
-            text: `❌ Failed to list workspaces: ${getError(workspacesResult) instanceof Error ? getError(workspacesResult).message : 'Unknown error'}`,
+            text: `❌ Failed to list workspaces: ${workspacesResult.error instanceof Error ? workspacesResult.error.message : 'Unknown error'}`,
           },
         ],
         isError: true,
       };
     }
 
-    const workspaces = getValue(workspacesResult);
+    const workspaces = workspacesResult.value;
     if (workspaces.length === 0) {
       return {
         content: [
@@ -249,19 +248,19 @@ export class ToolHandler {
     const { name } = schema.parse(args);
     const workspaceResult = await this.workspaceService.getWorkspaceInfo(name);
 
-    if (isErr(workspaceResult)) {
+    if (workspaceResult.isErr()) {
       return {
         content: [
           {
             type: 'text',
-            text: `❌ Failed to get workspace info: ${getError(workspaceResult) instanceof Error ? getError(workspaceResult).message : 'Unknown error'}`,
+            text: `❌ Failed to get workspace info: ${workspaceResult.error instanceof Error ? workspaceResult.error.message : 'Unknown error'}`,
           },
         ],
         isError: true,
       };
     }
 
-    const workspace = getValue(workspaceResult);
+    const workspace = workspaceResult.value;
     return {
       content: [
         {

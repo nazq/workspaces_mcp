@@ -1,6 +1,10 @@
 // Workspace Repository Implementation
 import path from 'node:path';
 
+import { inject, injectable } from 'tsyringe';
+
+import { TOKENS } from '../../../container/tokens.js';
+import type { Logger } from '../../../interfaces/services.js';
 import { createChildLogger } from '../../../utils/logger.js';
 import type {
   FileSystemProvider,
@@ -9,13 +13,17 @@ import type {
   WorkspaceRepository,
 } from '../interfaces.js';
 
-const logger = createChildLogger('data:workspace-repository');
-
+@injectable()
 export class FileSystemWorkspaceRepository implements WorkspaceRepository {
+  private logger: Logger;
+
   constructor(
-    private fs: FileSystemProvider,
-    private workspacesRoot: string
-  ) {}
+    @inject(TOKENS.FileSystemService) private fs: FileSystemProvider,
+    @inject('WorkspacesRoot') private workspacesRoot: string,
+    @inject(TOKENS.Logger) logger?: Logger
+  ) {
+    this.logger = logger ?? createChildLogger('data:workspace-repository');
+  }
 
   async exists(name: string): Promise<boolean> {
     const workspacePath = this.getWorkspacePath(name);
@@ -33,7 +41,7 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
     }
 
     try {
-      logger.debug(`Creating workspace: ${name} at ${workspacePath}`);
+      this.logger.debug(`Creating workspace: ${name} at ${workspacePath}`);
 
       // Create workspace directory
       await this.fs.createDirectory(workspacePath, true);
@@ -67,16 +75,16 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
         await this.fs.writeFile(readmePath, readmeContent);
       }
 
-      logger.info(`Workspace created successfully: ${name}`);
+      this.logger.info(`Workspace created successfully: ${name}`);
     } catch (error) {
-      logger.error(`Failed to create workspace: ${name}`, error);
+      this.logger.error(`Failed to create workspace: ${name}`, error);
       throw new Error(`Unable to create workspace: ${name}`);
     }
   }
 
   async list(): Promise<WorkspaceMetadata[]> {
     try {
-      logger.debug(`Listing workspaces in: ${this.workspacesRoot}`);
+      this.logger.debug(`Listing workspaces in: ${this.workspacesRoot}`);
 
       if (!(await this.fs.exists(this.workspacesRoot))) {
         return [];
@@ -95,15 +103,15 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
             workspaces.push(metadata);
           } catch (error) {
             // Skip invalid workspaces
-            logger.warn(`Skipping invalid workspace: ${entry}`, error);
+            this.logger.warn(`Skipping invalid workspace: ${entry}`, error);
           }
         }
       }
 
-      logger.debug(`Found ${workspaces.length} workspaces`);
+      this.logger.debug(`Found ${workspaces.length} workspaces`);
       return workspaces.sort((a, b) => a.name.localeCompare(b.name));
     } catch (error) {
-      logger.error('Failed to list workspaces', error);
+      this.logger.error('Failed to list workspaces', error);
       throw new Error('Unable to list workspaces');
     }
   }
@@ -143,7 +151,7 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
         };
       }
     } catch (error) {
-      logger.error(`Failed to get workspace metadata: ${name}`, error);
+      this.logger.error(`Failed to get workspace metadata: ${name}`, error);
       throw new Error(`Unable to get workspace metadata: ${name}`);
     }
   }
@@ -159,7 +167,7 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
     }
 
     try {
-      logger.debug(`Updating workspace: ${name} at ${workspacePath}`);
+      this.logger.debug(`Updating workspace: ${name} at ${workspacePath}`);
 
       // Read existing metadata
       const metadata = await this.getMetadata(name);
@@ -180,9 +188,9 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
         JSON.stringify(updatedMetadata, null, 2)
       );
 
-      logger.info(`Workspace updated successfully: ${name}`);
+      this.logger.info(`Workspace updated successfully: ${name}`);
     } catch (error) {
-      logger.error(`Failed to update workspace: ${name}`, error);
+      this.logger.error(`Failed to update workspace: ${name}`, error);
       throw new Error(`Unable to update workspace: ${name}`);
     }
   }
@@ -195,11 +203,11 @@ export class FileSystemWorkspaceRepository implements WorkspaceRepository {
     }
 
     try {
-      logger.debug(`Deleting workspace: ${name} at ${workspacePath}`);
+      this.logger.debug(`Deleting workspace: ${name} at ${workspacePath}`);
       await this.fs.deleteDirectory(workspacePath, true);
-      logger.info(`Workspace deleted successfully: ${name}`);
+      this.logger.info(`Workspace deleted successfully: ${name}`);
     } catch (error) {
-      logger.error(`Failed to delete workspace: ${name}`, error);
+      this.logger.error(`Failed to delete workspace: ${name}`, error);
       throw new Error(`Unable to delete workspace: ${name}`);
     }
   }

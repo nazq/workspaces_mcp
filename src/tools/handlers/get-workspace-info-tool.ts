@@ -2,11 +2,11 @@
 // Retrieves detailed information about a specific workspace
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import { z } from 'zod';
 
 import type { ToolContext, ToolHandler } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, getError, getValue, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Tool handler for getting detailed workspace information
@@ -32,7 +32,7 @@ export class GetWorkspaceInfoTool implements ToolHandler {
   async execute(
     args: z.infer<typeof this.inputSchema>,
     context: ToolContext
-  ): Promise<Result<CallToolResult>> {
+  ): Promise<Result<CallToolResult, Error>> {
     try {
       const { name, includeFiles } = args;
 
@@ -40,11 +40,11 @@ export class GetWorkspaceInfoTool implements ToolHandler {
       const workspaceResult =
         await context.workspaceRepository.getWorkspaceInfo(name);
 
-      if (isErr(workspaceResult)) {
-        return Err(getError(workspaceResult));
+      if (workspaceResult.isErr()) {
+        return err(workspaceResult.error);
       }
 
-      const workspace = getValue(workspaceResult);
+      const workspace = workspaceResult.value;
 
       // Build detailed information response
       let infoText = `Workspace Information: ${workspace.name}\n\n`;
@@ -68,7 +68,7 @@ export class GetWorkspaceInfoTool implements ToolHandler {
         }
       }
 
-      return Ok({
+      return ok({
         content: [
           {
             type: 'text',
@@ -79,7 +79,7 @@ export class GetWorkspaceInfoTool implements ToolHandler {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      return Err(new Error(`Failed to get workspace info: ${message}`));
+      return err(new Error(`Failed to get workspace info: ${message}`));
     }
   }
 }

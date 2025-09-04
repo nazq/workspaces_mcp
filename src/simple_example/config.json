@@ -1,0 +1,9 @@
+{
+  "logLevel": "info",
+  "service1": {
+    "message": "Hello from Service1"
+  },
+  "service2": {
+    "delay": 2000
+  }
+}

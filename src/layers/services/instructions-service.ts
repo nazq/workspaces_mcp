@@ -1,6 +1,11 @@
 // Instructions Service - Business Logic Layer for Shared Instructions Management
 // Wraps repository with Result pattern and business logic
 
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
+import { inject, injectable } from 'tsyringe';
+
+import { TOKENS } from '../../container/tokens.js';
 import type {
   GlobalInstructions,
   GlobalInstructionUpdateOptions,
@@ -9,8 +14,6 @@ import type {
   SharedInstruction,
   SharedInstructionCreateOptions,
 } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, Ok } from '../../utils/result.js';
 import type { InstructionsRepository } from '../data/interfaces.js';
 
 /**
@@ -20,17 +23,19 @@ import type { InstructionsRepository } from '../data/interfaces.js';
  * service interface expected by tools. It converts exceptions to Result objects
  * and adds business logic validation.
  */
+@injectable()
 export class InstructionsService implements IInstructionsService {
   constructor(
+    @inject(TOKENS.InstructionsRepository)
     private readonly repository: InstructionsRepository,
-    private readonly logger: Logger
+    @inject(TOKENS.Logger) private readonly logger: Logger
   ) {}
 
   async createSharedInstruction(
     name: string,
     content: string,
     options?: SharedInstructionCreateOptions
-  ): Promise<Result<void>> {
+  ): Promise<Result<void, Error>> {
     try {
       this.logger.debug(`Creating shared instruction: ${name}`, {
         contentLength: content.length,
@@ -48,17 +53,17 @@ export class InstructionsService implements IInstructionsService {
       await this.repository.createShared(name, instruction);
 
       this.logger.info(`Shared instruction created successfully: ${name}`);
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to create shared instruction: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to create shared instruction: ${message}`));
+      return err(new Error(`Failed to create shared instruction: ${message}`));
     }
   }
 
-  async listSharedInstructions(): Promise<Result<SharedInstruction[]>> {
+  async listSharedInstructions(): Promise<Result<SharedInstruction[], Error>> {
     try {
       this.logger.debug('Listing all shared instructions');
       const metadataList = await this.repository.listShared();
@@ -89,17 +94,19 @@ export class InstructionsService implements IInstructionsService {
       );
 
       this.logger.debug(`Found ${instructions.length} shared instructions`);
-      return Ok(instructions);
+      return ok(instructions);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to list shared instructions', {
         error: message,
       });
-      return Err(new Error(`Failed to list shared instructions: ${message}`));
+      return err(new Error(`Failed to list shared instructions: ${message}`));
     }
   }
 
-  async getSharedInstruction(name: string): Promise<Result<SharedInstruction>> {
+  async getSharedInstruction(
+    name: string
+  ): Promise<Result<SharedInstruction, Error>> {
     try {
       this.logger.debug(`Getting shared instruction: ${name}`);
       const instruction = await this.repository.getShared(name);
@@ -113,13 +120,13 @@ export class InstructionsService implements IInstructionsService {
         updatedAt: new Date(), // Add missing field
       };
 
-      return Ok(serviceInstruction);
+      return ok(serviceInstruction);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to get shared instruction: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to get shared instruction: ${message}`));
+      return err(new Error(`Failed to get shared instruction: ${message}`));
     }
   }
 
@@ -127,7 +134,7 @@ export class InstructionsService implements IInstructionsService {
     name: string,
     content: string,
     options?: SharedInstructionCreateOptions
-  ): Promise<Result<void>> {
+  ): Promise<Result<void, Error>> {
     try {
       this.logger.debug(`Updating shared instruction: ${name}`, {
         contentLength: content.length,
@@ -147,37 +154,37 @@ export class InstructionsService implements IInstructionsService {
       await this.repository.createShared(name, instruction);
 
       this.logger.info(`Shared instruction updated successfully: ${name}`);
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to update shared instruction: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to update shared instruction: ${message}`));
+      return err(new Error(`Failed to update shared instruction: ${message}`));
     }
   }
 
-  async deleteSharedInstruction(name: string): Promise<Result<void>> {
+  async deleteSharedInstruction(name: string): Promise<Result<void, Error>> {
     try {
       this.logger.debug(`Deleting shared instruction: ${name}`);
 
       await this.repository.deleteShared(name);
 
       this.logger.info(`Shared instruction deleted successfully: ${name}`);
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to delete shared instruction: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to delete shared instruction: ${message}`));
+      return err(new Error(`Failed to delete shared instruction: ${message}`));
     }
   }
 
   async updateGlobalInstructions(
     content: string,
     options?: GlobalInstructionUpdateOptions
-  ): Promise<Result<void>> {
+  ): Promise<Result<void, Error>> {
     try {
       this.logger.debug('Updating global instructions', {
         contentLength: content.length,
@@ -192,17 +199,17 @@ export class InstructionsService implements IInstructionsService {
       await this.repository.updateGlobal(instructions);
 
       this.logger.info('Global instructions updated successfully');
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to update global instructions', {
         error: message,
       });
-      return Err(new Error(`Failed to update global instructions: ${message}`));
+      return err(new Error(`Failed to update global instructions: ${message}`));
     }
   }
 
-  async getGlobalInstructions(): Promise<Result<GlobalInstructions>> {
+  async getGlobalInstructions(): Promise<Result<GlobalInstructions, Error>> {
     try {
       this.logger.debug('Getting global instructions');
       const instructions = await this.repository.getGlobal();
@@ -214,13 +221,13 @@ export class InstructionsService implements IInstructionsService {
         updatedAt: new Date(), // Add missing field expected by service layer
       };
 
-      return Ok(serviceInstructions);
+      return ok(serviceInstructions);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to get global instructions', {
         error: message,
       });
-      return Err(new Error(`Failed to get global instructions: ${message}`));
+      return err(new Error(`Failed to get global instructions: ${message}`));
     }
   }
 }

@@ -1,14 +1,16 @@
 // Workspace Service - Business Logic Layer for Workspace Management
 // Wraps repository with Result pattern and business logic
 
+import { Result, err, ok } from 'neverthrow';
+import { inject, injectable } from 'tsyringe';
+
+import { TOKENS } from '../../container/tokens.js';
 import type {
   WorkspaceService as IWorkspaceService,
   Logger,
   WorkspaceCreateOptions,
   WorkspaceMetadata,
 } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, Ok } from '../../utils/result.js';
 import type { WorkspaceRepository } from '../data/interfaces.js';
 
 /**
@@ -18,16 +20,18 @@ import type { WorkspaceRepository } from '../data/interfaces.js';
  * service interface expected by tools. It converts exceptions to Result objects
  * and adds business logic validation.
  */
+@injectable()
 export class WorkspaceService implements IWorkspaceService {
   constructor(
+    @inject(TOKENS.WorkspaceRepository)
     private readonly repository: WorkspaceRepository,
-    private readonly logger: Logger
+    @inject(TOKENS.Logger) private readonly logger: Logger
   ) {}
 
   async createWorkspace(
     name: string,
     options?: WorkspaceCreateOptions
-  ): Promise<Result<WorkspaceMetadata>> {
+  ): Promise<Result<WorkspaceMetadata, Error>> {
     try {
       this.logger.debug(`Creating workspace: ${name}`, options);
 
@@ -44,17 +48,17 @@ export class WorkspaceService implements IWorkspaceService {
       };
 
       this.logger.info(`Workspace created successfully: ${name}`);
-      return Ok(serviceMetadata);
+      return ok(serviceMetadata);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to create workspace: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to create workspace: ${message}`));
+      return err(new Error(`Failed to create workspace: ${message}`));
     }
   }
 
-  async listWorkspaces(): Promise<Result<WorkspaceMetadata[]>> {
+  async listWorkspaces(): Promise<Result<WorkspaceMetadata[], Error>> {
     try {
       this.logger.debug('Listing all workspaces');
       const workspaces = await this.repository.list();
@@ -66,15 +70,17 @@ export class WorkspaceService implements IWorkspaceService {
       }));
 
       this.logger.debug(`Found ${serviceWorkspaces.length} workspaces`);
-      return Ok(serviceWorkspaces);
+      return ok(serviceWorkspaces);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error('Failed to list workspaces', { error: message });
-      return Err(new Error(`Failed to list workspaces: ${message}`));
+      return err(new Error(`Failed to list workspaces: ${message}`));
     }
   }
 
-  async getWorkspaceInfo(name: string): Promise<Result<WorkspaceMetadata>> {
+  async getWorkspaceInfo(
+    name: string
+  ): Promise<Result<WorkspaceMetadata, Error>> {
     try {
       this.logger.debug(`Getting workspace info: ${name}`);
       const metadata = await this.repository.getMetadata(name);
@@ -85,49 +91,49 @@ export class WorkspaceService implements IWorkspaceService {
         updatedAt: metadata.createdAt, // Use createdAt as updatedAt if missing
       };
 
-      return Ok(serviceMetadata);
+      return ok(serviceMetadata);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to get workspace info: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to get workspace info: ${message}`));
+      return err(new Error(`Failed to get workspace info: ${message}`));
     }
   }
 
-  async deleteWorkspace(name: string): Promise<Result<void>> {
+  async deleteWorkspace(name: string): Promise<Result<void, Error>> {
     try {
       this.logger.debug(`Deleting workspace: ${name}`);
       await this.repository.delete(name);
       this.logger.info(`Workspace deleted successfully: ${name}`);
-      return Ok(undefined);
+      return ok(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to delete workspace: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to delete workspace: ${message}`));
+      return err(new Error(`Failed to delete workspace: ${message}`));
     }
   }
 
-  async workspaceExists(name: string): Promise<Result<boolean>> {
+  async workspaceExists(name: string): Promise<Result<boolean, Error>> {
     try {
       this.logger.debug(`Checking if workspace exists: ${name}`);
       const exists = await this.repository.exists(name);
-      return Ok(exists);
+      return ok(exists);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to check workspace existence: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to check workspace existence: ${message}`));
+      return err(new Error(`Failed to check workspace existence: ${message}`));
     }
   }
 
   async updateWorkspace(
     name: string,
     options: Partial<WorkspaceCreateOptions>
-  ): Promise<Result<WorkspaceMetadata>> {
+  ): Promise<Result<WorkspaceMetadata, Error>> {
     try {
       this.logger.debug(`Updating workspace: ${name}`, options);
 
@@ -141,13 +147,13 @@ export class WorkspaceService implements IWorkspaceService {
       };
 
       this.logger.info(`Workspace updated successfully: ${name}`);
-      return Ok(serviceMetadata);
+      return ok(serviceMetadata);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to update workspace: ${name}`, {
         error: message,
       });
-      return Err(new Error(`Failed to update workspace: ${message}`));
+      return err(new Error(`Failed to update workspace: ${message}`));
     }
   }
 }

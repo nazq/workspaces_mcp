@@ -5,9 +5,9 @@
 import type { ListResourcesResult } from '@modelcontextprotocol/sdk/types.js';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ok } from 'neverthrow';
 import type { ResourceService } from '../../../../interfaces/services.js';
 import { ListResourcesController } from '../../../../layers/controllers/resources/list-controller.js';
-import { Ok } from '../../../../utils/result.js';
 
 const mockResourceService: ResourceService = {
   listResources: vi.fn(),
@@ -46,7 +46,7 @@ describe('ListResourcesController', () => {
       };
 
       vi.mocked(mockResourceService.listResources).mockResolvedValue(
-        Ok(mockResult)
+        ok(mockResult)
       );
 
       const result = await controller.handle({});
@@ -63,7 +63,7 @@ describe('ListResourcesController', () => {
       };
 
       vi.mocked(mockResourceService.listResources).mockResolvedValue(
-        Ok(emptyResult)
+        ok(emptyResult)
       );
 
       const result = await controller.handle({});
@@ -85,7 +85,7 @@ describe('ListResourcesController', () => {
       };
 
       vi.mocked(mockResourceService.listResources).mockResolvedValue(
-        Ok(minimalResult)
+        ok(minimalResult)
       );
 
       const result = await controller.handle({});
@@ -133,7 +133,7 @@ describe('ListResourcesController', () => {
       };
 
       vi.mocked(mockResourceService.listResources).mockResolvedValue(
-        Ok(fullResult)
+        ok(fullResult)
       );
 
       const result = await controller.handle({});
@@ -160,7 +160,7 @@ describe('ListResourcesController', () => {
       };
 
       vi.mocked(mockResourceService.listResources).mockResolvedValue(
-        Ok(largeResult)
+        ok(largeResult)
       );
 
       const result = await controller.handle({});
@@ -175,7 +175,7 @@ describe('ListResourcesController', () => {
       const mockResult: ListResourcesResult = { resources: [] };
 
       vi.mocked(mockResourceService.listResources).mockResolvedValue(
-        Ok(mockResult)
+        ok(mockResult)
       );
 
       // The request parameter is not used in this controller, but should not cause issues
@@ -199,7 +199,7 @@ describe('ListResourcesController', () => {
       };
 
       vi.mocked(mockResourceService.listResources).mockResolvedValue(
-        Ok(originalResult)
+        ok(originalResult)
       );
 
       const result = await controller.handle({});

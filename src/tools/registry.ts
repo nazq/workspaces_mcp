@@ -3,21 +3,29 @@
 
 import { zodToJsonSchema } from '@alcyone-labs/zod-to-json-schema';
 import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err } from 'neverthrow';
+import { inject, injectable } from 'tsyringe';
 import type { z } from 'zod';
 
+import { TOKENS } from '../container/tokens.js';
 import { EVENTS } from '../events/events.js';
 import type {
   ToolRegistry as IToolRegistry,
+  Logger,
   ToolContext,
   ToolHandler,
 } from '../interfaces/services.js';
 import { createChildLogger } from '../utils/logger.js';
-import type { Result } from '../utils/result.js';
-import { Err, getError, getValue, isErr } from '../utils/result.js';
 
+@injectable()
 export class ToolRegistry implements IToolRegistry {
   private handlers = new Map<string, ToolHandler>();
-  private logger = createChildLogger('tool-registry');
+  private logger: Logger;
+
+  constructor(@inject(TOKENS.Logger) logger?: Logger) {
+    this.logger = logger ?? createChildLogger('tool-registry');
+  }
 
   register(handler: ToolHandler): void {
     if (this.handlers.has(handler.name)) {
@@ -51,13 +59,13 @@ export class ToolRegistry implements IToolRegistry {
     name: string,
     args: unknown,
     context: ToolContext
-  ): Promise<Result<CallToolResult>> {
+  ): Promise<Result<CallToolResult, Error>> {
     const startTime = Date.now();
 
     try {
       const handler = this.handlers.get(name);
       if (!handler) {
-        return Err(new Error(`Unknown tool: ${name}`));
+        return err(new Error(`Unknown tool: ${name}`));
       }
 
       // Validate arguments using the handler's schema
@@ -83,7 +91,7 @@ export class ToolRegistry implements IToolRegistry {
           undefined,
           error
         );
-        return Err(error);
+        return err(error);
       }
 
       this.logger.debug(`Executing tool: ${name}`, { args: parseResult.data });
@@ -96,7 +104,7 @@ export class ToolRegistry implements IToolRegistry {
 
       const executionTime = Date.now() - startTime;
 
-      if (isErr(result)) {
+      if (result.isErr()) {
         await this.emitToolEvent(
           context,
           'failed',
@@ -104,7 +112,7 @@ export class ToolRegistry implements IToolRegistry {
           args,
           executionTime,
           undefined,
-          getError(result)
+          result.error
         );
         return result;
       }
@@ -115,7 +123,7 @@ export class ToolRegistry implements IToolRegistry {
         name,
         args,
         executionTime,
-        getValue(result)
+        result.value
       );
       return result;
     } catch (error) {
@@ -134,7 +142,7 @@ export class ToolRegistry implements IToolRegistry {
         toolError
       );
 
-      return Err(toolError);
+      return err(toolError);
     }
   }
 

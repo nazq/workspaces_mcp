@@ -44,6 +44,10 @@ describe('Simple MCP Server Test', () => {
       stdio: 'pipe',
     });
 
+    // Fix MaxListenersExceeded warning
+    mcpServer.stdout?.setMaxListeners(30);
+    mcpServer.stderr?.setMaxListeners(30);
+
     // Debug server output
     mcpServer.stdout?.on('data', (data) => {
       console.log('SERVER STDOUT:', data.toString());

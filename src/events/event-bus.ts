@@ -2,12 +2,14 @@
 // Battle-tested, memory-efficient, and performant event handling
 
 import { EventEmitter } from 'eventemitter3';
+import { inject, injectable } from 'tsyringe';
 
+import { TOKENS } from '../container/tokens.js';
 import type { EventBus, EventHandler, Logger } from '../interfaces/services.js';
-import { createChildLogger } from '../utils/logger.js';
 
 import type { EventMap } from './events.js';
 
+@injectable()
 export class AsyncEventBus implements EventBus {
   private emitter: EventEmitter;
   private logger: Logger;
@@ -17,9 +19,9 @@ export class AsyncEventBus implements EventBus {
     EventHandler<EventMap[keyof EventMap]>
   >();
 
-  constructor(logger?: Logger) {
+  constructor(@inject(TOKENS.Logger) logger: Logger) {
     this.emitter = new EventEmitter();
-    this.logger = logger ?? createChildLogger('event-bus');
+    this.logger = logger;
 
     // EventEmitter3 doesn't have setMaxListeners method - it handles this automatically
     // this.emitter.setMaxListeners(100);

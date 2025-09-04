@@ -2,11 +2,11 @@
 // Handles listing all available workspaces with metadata and filtering options
 
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Result } from 'neverthrow';
+import { err, ok } from 'neverthrow';
 import { z } from 'zod';
 
 import type { ToolContext, ToolHandler } from '../../interfaces/services.js';
-import type { Result } from '../../utils/result.js';
-import { Err, getError, getValue, isErr, Ok } from '../../utils/result.js';
 
 /**
  * Tool handler for listing all workspaces
@@ -27,7 +27,7 @@ export class ListWorkspacesTool implements ToolHandler {
   async execute(
     args: z.infer<typeof this.inputSchema>,
     context: ToolContext
-  ): Promise<Result<CallToolResult>> {
+  ): Promise<Result<CallToolResult, Error>> {
     try {
       const { includeMetadata, sortBy } = args;
 
@@ -35,11 +35,11 @@ export class ListWorkspacesTool implements ToolHandler {
       const workspacesResult =
         await context.workspaceRepository.listWorkspaces();
 
-      if (isErr(workspacesResult)) {
-        return Err(getError(workspacesResult));
+      if (workspacesResult.isErr()) {
+        return err(workspacesResult.error);
       }
 
-      const workspaces = getValue(workspacesResult);
+      const workspaces = workspacesResult.value;
 
       // Sort workspaces based on sortBy parameter
       const sortedWorkspaces = [...workspaces].sort((a, b) => {
@@ -72,7 +72,7 @@ export class ListWorkspacesTool implements ToolHandler {
           ? `Found ${workspaces.length} workspace(s):\n${workspaceList.join('\n')}`
           : 'No workspaces found. Create your first workspace using the create_workspace tool.';
 
-      return Ok({
+      return ok({
         content: [
           {
             type: 'text',
@@ -83,7 +83,7 @@ export class ListWorkspacesTool implements ToolHandler {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      return Err(new Error(`Failed to list workspaces: ${message}`));
+      return err(new Error(`Failed to list workspaces: ${message}`));
     }
   }
 }
