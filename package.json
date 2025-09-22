@@ -43,7 +43,7 @@
     "@modelcontextprotocol/sdk": "^1.0.3",
     "chalk": "^5.3.0",
     "chokidar": "^4.0.1",
-    "fs-extra": "^11.2.0",
+    "fs-extra": "^11.3.2",
     "tslog": "^4.9.3",
     "zod": "^4.1.1"
   },
