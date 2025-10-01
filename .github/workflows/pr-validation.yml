@@ -142,7 +142,7 @@ jobs:
           echo "📦 This PR will create beta version: $BETA_VERSION"
 
       - name: PR Summary Comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { BETA_VERSION } = process.env;
