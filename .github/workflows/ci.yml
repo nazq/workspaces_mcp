@@ -124,7 +124,7 @@ jobs:
           ls -la *.dxt
 
       - name: Upload DXT package as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: workspaces-mcp-dxt-${{ github.sha }}
           path: '*.dxt'
